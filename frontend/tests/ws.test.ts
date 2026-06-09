@@ -39,6 +39,7 @@ describe("ChatSocket", () => {
       }
       close() {}
     }
+    (FakeWS as unknown as { OPEN: number }).OPEN = 1;
     (globalThis as unknown as { WebSocket: unknown }).WebSocket = FakeWS;
     sock.connect();
     sock.send({ type: "ping" });

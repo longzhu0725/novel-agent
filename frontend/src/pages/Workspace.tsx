@@ -8,6 +8,7 @@ import CharacterList from "../features/characters/CharacterList";
 import OutlineTree from "../features/outline/OutlineTree";
 import ChapterList from "../features/chapters/ChapterList";
 import ChatPanel from "../features/chat/ChatPanel";
+import AdvisorPanel from "../features/advisors/AdvisorPanel";
 
 function uuid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -37,7 +38,7 @@ export default function Workspace() {
         <span className="text-sm text-slate-500">{project.current_phase}</span>
       </header>
       <PhaseNav project={project} onAdvance={setPhase} />
-      <main className="flex-1 grid grid-cols-3 gap-2 p-2 overflow-hidden">
+      <main className="flex-1 grid grid-cols-4 gap-2 p-2 overflow-hidden">
         <div className="col-span-2 overflow-y-auto space-y-2">
           {project.current_phase === "INIT" && (
             <div className="bg-white p-3 rounded shadow text-sm text-slate-600">
@@ -50,7 +51,10 @@ export default function Workspace() {
           {(project.current_phase === "WRITING" ||
             project.current_phase === "DONE") && <ChapterList pid={pid} />}
         </div>
-        <ChatPanel />
+        <div className="overflow-y-auto space-y-2">
+          <AdvisorPanel pid={pid} />
+          <ChatPanel />
+        </div>
       </main>
     </div>
   );
