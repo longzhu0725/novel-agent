@@ -49,7 +49,9 @@ export default function AdvisorPanel({ pid }: { pid: string }) {
         const v = form[f.key]?.trim();
         if (v) body[f.key] = v;
       });
-      const r = await api.post(`/projects/${pid}/advisors/${open}`, body);
+      const r = await api.post(`/projects/${pid}/advisors/${open}`, body, {
+        timeout: 120_000,
+      });
       setAdvice(r.data);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);

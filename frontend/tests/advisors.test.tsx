@@ -51,6 +51,7 @@ describe("AdvisorPanel", () => {
       expect(api.post).toHaveBeenCalledWith(
         `/projects/${PID}/advisors/outline`,
         { question: "怎么安排三卷结构" },
+        { timeout: 120_000 },
       );
     });
     await waitFor(() => {
@@ -72,6 +73,7 @@ describe("AdvisorPanel", () => {
       expect(api.post).toHaveBeenCalledWith(
         `/projects/${PID}/advisors/style`,
         { text: "夜色压山" },  // 无 focus
+        { timeout: 120_000 },
       );
     });
   });
