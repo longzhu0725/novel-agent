@@ -184,6 +184,8 @@ class Agent:
                 break
             from app.core.llm import LLMTool
 
+            # 注入 LLM 让 consult_* 工具可用
+            ctx.llm = self.llm
             result = execute_tool(
                 LLMTool(name=tool_evt["name"], description="", parameters={}),
                 ctx,

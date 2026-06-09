@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable
 
-from app.core.llm import LLMTool
+from app.core.llm import LLMClient, LLMTool
 from app.core.state_machine import Phase
 from app.storage.file_repo import FileRepo
 from app.storage.models import (
@@ -26,6 +26,7 @@ class ToolContext:
     sqlite: SqliteRepo
     file: FileRepo
     project_phase: Phase
+    llm: LLMClient | None = None  # 供 consult_* sub-agent 使用
 
 
 @dataclass
@@ -213,6 +214,61 @@ def _impl_read_project_summary(ctx: ToolContext, args: dict[str, Any]) -> ToolRe
     )
 
 
+# ---- sub-agent consult tools (advisory only) ----
+def _impl_consult_outline_expert(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    if ctx.llm is None:
+        return ToolResult(ok=False, error="LLM 不可用，无法咨询专家")
+    from app.agent.subagents import consult_outline_expert_sync
+
+    p = ctx.sqlite.get_project(ctx.project_id)
+    if p is None:
+        return ToolResult(ok=False, error="项目不存在")
+    question = args.get("question", "")
+    if not question:
+        return ToolResult(ok=False, error="缺少必填参数：question")
+    result = consult_outline_expert_sync(
+        llm=ctx.llm, sq=ctx.sqlite, fr=ctx.file,
+        project=p, question=question,
+    )
+    return ToolResult(ok=True, data={"advisor": result.advisor, "advice": result.advice})
+
+
+def _impl_consult_style_expert(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    if ctx.llm is None:
+        return ToolResult(ok=False, error="LLM 不可用，无法咨询专家")
+    from app.agent.subagents import consult_style_expert_sync
+
+    p = ctx.sqlite.get_project(ctx.project_id)
+    if p is None:
+        return ToolResult(ok=False, error="项目不存在")
+    text = args.get("text", "")
+    if not text:
+        return ToolResult(ok=False, error="缺少必填参数：text")
+    result = consult_style_expert_sync(
+        llm=ctx.llm, sq=ctx.sqlite, fr=ctx.file,
+        project=p, text=text, focus=args.get("focus", ""),
+    )
+    return ToolResult(ok=True, data={"advisor": result.advisor, "advice": result.advice})
+
+
+def _impl_consult_reviewer(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    if ctx.llm is None:
+        return ToolResult(ok=False, error="LLM 不可用，无法咨询专家")
+    from app.agent.subagents import consult_reviewer_sync
+
+    p = ctx.sqlite.get_project(ctx.project_id)
+    if p is None:
+        return ToolResult(ok=False, error="项目不存在")
+    target = args.get("target", "")
+    if not target:
+        return ToolResult(ok=False, error="缺少必填参数：target")
+    result = consult_reviewer_sync(
+        llm=ctx.llm, sq=ctx.sqlite, fr=ctx.file,
+        project=p, target=target, content_id=args.get("content_id", ""),
+    )
+    return ToolResult(ok=True, data={"advisor": result.advisor, "advice": result.advice})
+
+
 # ---------------- registry ----------------
 @dataclass
 class ToolDef:
@@ -362,6 +418,42 @@ _REGISTRY: list[ToolDef] = [
         _schema({}, []),
         {Phase.WORLD, Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING, Phase.DONE},
         _impl_read_project_summary,
+    ),
+    ToolDef(
+        "consult_outline_expert",
+        "咨询大纲专家（advisory only）：根据项目当前的大纲/人物/章节，针对你提出的问题给出情节结构、伏笔、节奏方面的建议。",
+        _schema(
+            {"question": {"type": "string", "description": "你想问的具体问题"}},
+            ["question"],
+        ),
+        {Phase.OUTLINE, Phase.WRITING, Phase.DONE},
+        _impl_consult_outline_expert,
+    ),
+    ToolDef(
+        "consult_style_expert",
+        "咨询风格专家（advisory only）：针对一段正文，结合项目的风格说明，给出口吻/节奏/用词的改进建议与可复用改写。",
+        _schema(
+            {
+                "text": {"type": "string", "description": "要评审的正文片段"},
+                "focus": {"type": "string", "description": "想重点关注的方面，可选"},
+            },
+            ["text"],
+        ),
+        {Phase.WRITING, Phase.DONE},
+        _impl_consult_style_expert,
+    ),
+    ToolDef(
+        "consult_reviewer",
+        "咨询评审专家（advisory only）：针对你指定的目标（人物一致性/世界观自洽/伏笔/节奏等），逐条列出问题与改进建议。",
+        _schema(
+            {
+                "target": {"type": "string", "description": "评审目标，如'检查林夕的动机是否一致'"},
+                "content_id": {"type": "string", "description": "指定章节 id，可选"},
+            },
+            ["target"],
+        ),
+        {Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING, Phase.DONE},
+        _impl_consult_reviewer,
     ),
 ]
 

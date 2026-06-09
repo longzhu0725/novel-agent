@@ -25,4 +25,4 @@ def test_settings_missing_required_field(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
     monkeypatch.setenv("DATA_DIR", "/tmp")
     with pytest.raises(ValidationError):
-        Settings()
+        Settings(_env_file=None)
