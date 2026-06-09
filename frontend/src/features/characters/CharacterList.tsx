@@ -185,7 +185,13 @@ function EditCharacterModal({
   );
 }
 
-export default function CharacterList({ pid }: { pid: string }) {
+export default function CharacterList({
+  pid,
+  embedded = false,
+}: {
+  pid: string;
+  embedded?: boolean;
+}) {
   const { characters, refreshCharacters } = useProjectStore();
   const [name, setName] = useState("");
   const [deleting, setDeleting] = useState<Character | null>(null);
@@ -215,6 +221,117 @@ export default function CharacterList({ pid }: { pid: string }) {
       setBusy(false);
     }
   };
+
+  // embedded 模式：去除外层 parchment（由父容器提供），精简标题
+  if (embedded) {
+    return (
+      <div className="parchment p-0 animate-fade-in">
+        {/* 标题 */}
+        <div className="mb-2 px-6 md:px-8 pt-6 md:pt-8">
+          <h3 className="font-display italic text-2xl text-parchment">人物志</h3>
+          <p className="font-body italic text-parchment-dim text-sm mt-1">
+            给他们一个名字，他们会自己开口说话。
+            <span className="text-parchment-faint">（点击卡牌可修订）</span>
+          </p>
+        </div>
+        <div className="divider-gold mx-6 md:mx-8" />
+
+        {/* 新建 */}
+        <div className="flex gap-3 mb-6 px-6 md:px-8 mt-4">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && create()}
+            placeholder="新人物的名字……"
+            className="input flex-1"
+          />
+          <button onClick={create} className="btn btn-primary">
+            列入名册
+          </button>
+        </div>
+
+        {/* 人物卡列表 */}
+        <div className="px-6 md:px-8 pb-6 md:pb-8">
+          {characters.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="font-display italic text-xl text-parchment-dim">
+                名册尚是空白
+              </p>
+              <p className="text-parchment-faint text-sm mt-2">
+                在上方为某位角色命名。
+              </p>
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {characters.map((c: Character) => (
+                <li
+                  key={c.id}
+                  className="index-card relative group cursor-pointer hover:border-gold"
+                  onClick={() => setEditing(c)}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleting(c);
+                    }}
+                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-parchment-faint hover:text-crimson opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    title="删除人物"
+                    aria-label="删除人物"
+                  >
+                    ×
+                  </button>
+                  <div className="flex items-baseline justify-between gap-2 mb-2 pr-6">
+                    <h3 className="font-display text-xl text-parchment leading-tight">
+                      {c.name}
+                    </h3>
+                    <span className="font-ornament text-xs text-gold tracking-widest shrink-0">
+                      {ROLE_LABELS[c.role] ?? c.role}
+                    </span>
+                  </div>
+                  {c.profile_md ? (
+                    <p className="font-body text-parchment-dim text-sm leading-relaxed whitespace-pre-wrap line-clamp-4">
+                      {c.profile_md}
+                    </p>
+                  ) : (
+                    <p className="font-body italic text-parchment-faint text-sm">
+                      ——尚未着墨（点击修订）
+                    </p>
+                  )}
+                  <div className="mt-3 pt-2 border-t border-leather flex justify-between items-center">
+                    <span className="font-mono text-xs text-parchment-faint">
+                      {formatDate(c.updated_at)}
+                    </span>
+                    <span className="text-gold opacity-50 text-xs font-display italic group-hover:opacity-100">
+                      ❧ 修订 ›
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {deleting && (
+          <ConfirmDelete
+            name={deleting.name}
+            busy={busy}
+            onCancel={() => setDeleting(null)}
+            onConfirm={confirmDelete}
+          />
+        )}
+        {editing && (
+          <EditCharacterModal
+            character={editing}
+            onClose={() => setEditing(null)}
+            onSaved={(c) => {
+              void refreshCharacters();
+              setEditing(c);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="parchment p-6 md:p-8 animate-fade-in">

@@ -9,11 +9,15 @@ from app.storage.models import Project
 
 _PHASE_HINT = {
     Phase.INIT: "你正在与作者初次交流，了解他想写什么。",
-    Phase.WORLD: "请协助作者搭建世界观：地理、势力、规则、历史。",
-    Phase.CHARACTERS: "请协助作者设计人物卡：姓名、身份、动机、关系。",
-    Phase.OUTLINE: "请协助作者搭建大纲：分卷→分章→节点摘要。",
+    Phase.FOUNDATION: (
+        "你正在协助作者完成基础设定——"
+        "**世界观**（地理、势力、规则、历史）与 **人物**（姓名、身份、动机、关系）。"
+        "两件事可以并行进行，没有先后顺序。"
+        "询问需要补充什么；给出风格建议；不要急于写正文。"
+    ),
     Phase.WRITING: (
-        "请按大纲撰写章节正文，保持风格一致。"
+        "你正在协助作者按大纲撰写章节正文。**每个大纲节点（卷/部/章）独立成章**，"
+        "用户通常会选中一个节点，然后在其下创建/编辑章节。"
         "**撰写新章节时**：先调用 begin_chapter(title, order, [outline_node_id]) 创建空章节并拿到 chapter_id，"
         "之后你输出的每个文本 delta 会被系统自动追加到该章节（边写边落库）。"
         "**写完后**：调用 finalize_chapter(chapter_id) 标记完成。"

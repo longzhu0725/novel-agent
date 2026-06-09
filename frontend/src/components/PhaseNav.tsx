@@ -4,10 +4,8 @@ import type { Project } from "../api/client";
 
 const PHASES = [
   { key: "INIT", cn: "起", label: "构想" },
-  { key: "WORLD", cn: "壹", label: "世界" },
-  { key: "CHARACTERS", cn: "贰", label: "人物" },
-  { key: "OUTLINE", cn: "叁", label: "纲目" },
-  { key: "WRITING", cn: "肆", label: "撰文" },
+  { key: "FOUNDATION", cn: "壹", label: "基础" },
+  { key: "WRITING", cn: "贰", label: "撰文" },
   { key: "DONE", cn: "终", label: "完稿" },
 ] as const;
 
@@ -78,7 +76,6 @@ export default function PhaseNav({
         </div>
       </div>
 
-      {/* 用 Portal 渲染到 body，逃出 nav 的 backdrop-filter 裁剪 */}
       {confirmBack &&
         createPortal(
           <div

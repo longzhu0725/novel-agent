@@ -53,17 +53,21 @@ function ConfirmDelete({
 function NewChapterModal({
   pid,
   defaultOrder,
+  defaultOutlineNodeId,
   onClose,
   onCreated,
 }: {
   pid: string;
   defaultOrder: number;
+  defaultOutlineNodeId?: string | null;
   onClose: () => void;
   onCreated: (c: Chapter) => void;
 }) {
   const [title, setTitle] = useState("");
   const [order, setOrder] = useState<string>(String(defaultOrder));
-  const [outlineNodeId, setOutlineNodeId] = useState("");
+  const [outlineNodeId, setOutlineNodeId] = useState(
+    defaultOutlineNodeId ?? "",
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -291,7 +295,15 @@ function EditChapterMetaModal({
   );
 }
 
-export default function ChapterList({ pid }: { pid: string }) {
+export default function ChapterList({
+  pid,
+  outlineNodeId = null,
+  embedded = false,
+}: {
+  pid: string;
+  outlineNodeId?: string | null;
+  embedded?: boolean;
+}) {
   const { chapters, refreshChapters } = useProjectStore();
   const [active, setActive] = useState<string | null>(null);
   const [content, setContent] = useState("");
@@ -305,6 +317,23 @@ export default function ChapterList({ pid }: { pid: string }) {
   useEffect(() => {
     refreshChapters();
   }, [refreshChapters]);
+
+  // 当 outlineNodeId 变化时，自动选中本组第一章
+  useEffect(() => {
+    if (outlineNodeId !== null) {
+      const first = chapters.find((c) => c.outline_node_id === outlineNodeId);
+      if (first) {
+        setActive(first.id);
+        setContent(first.content_md);
+        setSavedAt(null);
+      }
+    }
+  }, [outlineNodeId, chapters]);
+
+  // 过滤：当传入 outlineNodeId 时只显示该节点下的章节
+  const visibleChapters = outlineNodeId
+    ? chapters.filter((c) => c.outline_node_id === outlineNodeId)
+    : chapters;
 
   const open = (ch: Chapter) => {
     setActive(ch.id);
@@ -355,47 +384,58 @@ export default function ChapterList({ pid }: { pid: string }) {
     setContent(c.content_md);
   };
 
-  const activeChapter = chapters.find((c) => c.id === active);
-  const defaultOrder = (chapters.at(-1)?.order ?? 0) + 1;
+  const activeChapter = visibleChapters.find((c) => c.id === active);
+  const defaultOrder = (visibleChapters.at(-1)?.order ?? 0) + 1;
 
-  return (
-    <div className="parchment p-6 md:p-8 animate-fade-in">
-      {/* 标题 */}
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <div>
-          <div className="label-ornament mb-1">肆 · 撰文</div>
-          <h2 className="font-display italic text-3xl text-parchment">
-            章回
-          </h2>
-          <p className="font-body italic text-parchment-dim text-sm mt-1">
-            落笔成章。每一个字，都是这卷不可分割的一部分。
-            <span className="text-parchment-faint">（点击卡牌可修订）</span>
-          </p>
-        </div>
-        <button
-          onClick={() => setCreating(true)}
-          className="btn btn-primary shrink-0"
-        >
-          + 启新章
-        </button>
+  // 节选标题区（embedded 模式精简标题）
+  const Header = embedded ? (
+    <div className="mb-2">
+      <h3 className="font-display italic text-2xl text-parchment">章回</h3>
+      <p className="font-body italic text-parchment-dim text-sm mt-1">
+        落笔成章。每一个字，都是这卷不可分割的一部分。
+        <span className="text-parchment-faint">（点击卡牌可修订）</span>
+      </p>
+    </div>
+  ) : (
+    <div className="flex items-baseline justify-between gap-3 mb-2">
+      <div>
+        <div className="label-ornament mb-1">肆 · 撰文</div>
+        <h2 className="font-display italic text-3xl text-parchment">章回</h2>
+        <p className="font-body italic text-parchment-dim text-sm mt-1">
+          落笔成章。每一个字，都是这卷不可分割的一部分。
+          <span className="text-parchment-faint">（点击卡牌可修订）</span>
+        </p>
       </div>
+      <button
+        onClick={() => setCreating(true)}
+        className="btn btn-primary shrink-0"
+      >
+        + 启新章
+      </button>
+    </div>
+  );
 
+  const body = (
+    <>
+      {Header}
       <div className="divider-gold" />
 
       {/* 章节选择器 */}
-      {chapters.length === 0 ? (
+      {visibleChapters.length === 0 ? (
         <div className="text-center py-12">
           <p className="font-display italic text-xl text-parchment-dim">
             尚未开篇
           </p>
           <p className="text-parchment-faint text-sm mt-2">
-            点右上角「启新章」，或请右侧的笔为你揭幕第一章。
+            {outlineNodeId
+              ? "选中节点下尚无章节——点上方「启新章」为它添上第一笔。"
+              : "点右上角「启新章」，或请右侧的笔为你揭幕第一章。"}
           </p>
         </div>
       ) : (
         <>
           <ul className="flex flex-wrap gap-2 mb-6">
-            {chapters.map((ch) => {
+            {visibleChapters.map((ch) => {
               const s = STATUS_LABELS[ch.status] ?? {
                 cn: ch.status,
                 color: "text-parchment-faint border-leather",
@@ -525,10 +565,19 @@ export default function ChapterList({ pid }: { pid: string }) {
         <NewChapterModal
           pid={pid}
           defaultOrder={defaultOrder}
+          defaultOutlineNodeId={outlineNodeId}
           onClose={() => setCreating(false)}
           onCreated={onCreated}
         />
       )}
-    </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="animate-fade-in">{body}</div>;
+  }
+
+  return (
+    <div className="parchment p-6 md:p-8 animate-fade-in">{body}</div>
   );
 }

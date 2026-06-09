@@ -3,19 +3,16 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useProjectStore } from "../stores/projectStore";
 import { useChatStore } from "../stores/chatStore";
 import PhaseNav from "../components/PhaseNav";
-import WorldEditor from "../features/world/WorldEditor";
-import CharacterList from "../features/characters/CharacterList";
-import OutlineTree from "../features/outline/OutlineTree";
+import FoundationPanel from "../features/FoundationPanel";
+import WritingPanel from "../features/WritingPanel";
 import ChapterList from "../features/chapters/ChapterList";
 import ChatPanel from "../features/chat/ChatPanel";
 import AdvisorPanel from "../features/advisors/AdvisorPanel";
 
 const PHASE_TITLES: Record<string, { en: string; cn: string }> = {
   INIT: { en: "The First Page", cn: "落墨之前" },
-  WORLD: { en: "World Building", cn: "构 · 世界观" },
-  CHARACTERS: { en: "Dramatis Personae", cn: "立 · 人物志" },
-  OUTLINE: { en: "The Plot", cn: "谋 · 章纲" },
-  WRITING: { en: "The Manuscript", cn: "书 · 章节" },
+  FOUNDATION: { en: "Foundations", cn: "基 · 设定" },
+  WRITING: { en: "The Manuscript", cn: "书 · 撰文" },
   DONE: { en: "The Final Draft", cn: "成 · 完稿" },
 };
 
@@ -112,11 +109,11 @@ export default function Workspace() {
               </p>
             </div>
           )}
-          {project.current_phase === "WORLD" && <WorldEditor pid={pid} />}
-          {project.current_phase === "CHARACTERS" && <CharacterList pid={pid} />}
-          {project.current_phase === "OUTLINE" && <OutlineTree pid={pid} />}
-          {(project.current_phase === "WRITING" ||
-            project.current_phase === "DONE") && <ChapterList pid={pid} />}
+          {project.current_phase === "FOUNDATION" && (
+            <FoundationPanel pid={pid} />
+          )}
+          {project.current_phase === "WRITING" && <WritingPanel pid={pid} />}
+          {project.current_phase === "DONE" && <ChapterList pid={pid} />}
         </section>
 
         {/* 右侧栏：顾问 + 对话 */}

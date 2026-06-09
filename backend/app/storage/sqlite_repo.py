@@ -92,6 +92,19 @@ class SqliteRepo:
     def init_schema(self) -> None:
         with self._conn() as c:
             c.executescript(_SCHEMA)
+            self._migrate_legacy_phases(c)
+
+    def _migrate_legacy_phases(self, c: sqlite3.Connection) -> None:
+        """老 phase 字符串（WORLD/CHARACTERS/OUTLINE）→ 新 phase（FOUNDATION/WRITING）。"""
+        from app.core.state_machine import migrate_legacy_phase
+        rows = c.execute("SELECT id, current_phase FROM projects").fetchall()
+        for r in rows:
+            new_phase = migrate_legacy_phase(r["current_phase"])
+            if new_phase.value != r["current_phase"]:
+                c.execute(
+                    "UPDATE projects SET current_phase = ? WHERE id = ?",
+                    (new_phase.value, r["id"]),
+                )
 
     # ---------- Project ----------
     def insert_project(self, p: Project) -> None:
