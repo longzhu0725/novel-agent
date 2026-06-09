@@ -158,7 +158,31 @@ def _impl_create_chapter(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
     )
     ctx.sqlite.insert_chapter(ch)
     ctx.file.write_chapter(ctx.project_id, ch.order, ch.title, content)
-    return ToolResult(ok=True, data={"id": ch.id})
+    return ToolResult(ok=True, data={"id": ch.id, "stream": False})
+
+
+def _impl_begin_chapter(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    """创建空章节（流式追加模式）。Agent 拿到 id 后，每个 delta 会自动 append。"""
+    now = datetime.now()
+    title = args.get("title", "未命名")
+    ch = Chapter(
+        id=uuid.uuid4().hex,
+        project_id=ctx.project_id,
+        outline_node_id=args.get("outline_node_id"),
+        order=int(args.get("order", 0)),
+        title=title,
+        content_md="",
+        word_count=0,
+        status=ChapterStatus.DRAFT_PARTIAL,
+        created_at=now,
+        updated_at=now,
+    )
+    ctx.sqlite.insert_chapter(ch)
+    ctx.file.write_chapter(ctx.project_id, ch.order, title, "")
+    return ToolResult(
+        ok=True,
+        data={"id": ch.id, "stream": True, "hint": "后续你的每个 delta 都会自动追加到该章节"},
+    )
 
 
 def _impl_append_to_chapter(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
@@ -170,6 +194,20 @@ def _impl_append_to_chapter(ctx: ToolContext, args: dict[str, Any]) -> ToolResul
     ch.content_md += delta
     ch.word_count = sum(1 for c in ch.content_md if not c.isspace())
     ch.status = ChapterStatus.DRAFT_PARTIAL
+    ch.updated_at = datetime.now()
+    ctx.sqlite.update_chapter(ch)
+    # 同步落盘
+    ctx.file.write_chapter(ctx.project_id, ch.order, ch.title, ch.content_md)
+    return ToolResult(ok=True, data={"id": chid, "word_count": ch.word_count})
+
+
+def _impl_finalize_chapter(ctx: ToolContext, args: dict[str, Any]) -> ToolResult:
+    """把章节状态从 DRAFT_PARTIAL 切回 DRAFT（流式完成）。"""
+    chid = args.get("chapter_id")
+    ch = ctx.sqlite.get_chapter(chid) if chid else None
+    if ch is None:
+        return ToolResult(ok=False, error="章节不存在")
+    ch.status = ChapterStatus.DRAFT
     ch.updated_at = datetime.now()
     ctx.sqlite.update_chapter(ch)
     return ToolResult(ok=True, data={"id": chid, "word_count": ch.word_count})
@@ -375,7 +413,7 @@ _REGISTRY: list[ToolDef] = [
     ),
     ToolDef(
         "create_chapter",
-        "建章节",
+        "建章节（一次性写入全部正文）。如需边写边落库，请改用 begin_chapter。",
         _schema(
             {
                 "title": {"type": "string"},
@@ -389,14 +427,35 @@ _REGISTRY: list[ToolDef] = [
         _impl_create_chapter,
     ),
     ToolDef(
+        "begin_chapter",
+        "建空章节并进入流式追加模式：拿到 chapter_id 后，你的每个文本 delta 都会自动追加到该章节（带 DRAFT_PARTIAL 状态），最后调用 finalize_chapter 标记完成。",
+        _schema(
+            {
+                "title": {"type": "string"},
+                "order": {"type": "integer"},
+                "outline_node_id": {"type": ["string", "null"]},
+            },
+            ["title", "order"],
+        ),
+        {Phase.WRITING},
+        _impl_begin_chapter,
+    ),
+    ToolDef(
         "append_to_chapter",
-        "追加章节正文",
+        "显式追加章节正文（通常由系统自动处理，不需调用）",
         _schema(
             {"chapter_id": {"type": "string"}, "delta": {"type": "string"}},
             ["chapter_id", "delta"],
         ),
         {Phase.WRITING},
         _impl_append_to_chapter,
+    ),
+    ToolDef(
+        "finalize_chapter",
+        "流式追加完成后，调用此工具把章节状态从 DRAFT_PARTIAL 切回 DRAFT。",
+        _schema({"chapter_id": {"type": "string"}}, ["chapter_id"]),
+        {Phase.WRITING},
+        _impl_finalize_chapter,
     ),
     ToolDef(
         "read_chapter",

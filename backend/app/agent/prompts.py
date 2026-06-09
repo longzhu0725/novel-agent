@@ -12,7 +12,13 @@ _PHASE_HINT = {
     Phase.WORLD: "请协助作者搭建世界观：地理、势力、规则、历史。",
     Phase.CHARACTERS: "请协助作者设计人物卡：姓名、身份、动机、关系。",
     Phase.OUTLINE: "请协助作者搭建大纲：分卷→分章→节点摘要。",
-    Phase.WRITING: "请按大纲撰写章节正文，保持风格一致。",
+    Phase.WRITING: (
+        "请按大纲撰写章节正文，保持风格一致。"
+        "**撰写新章节时**：先调用 begin_chapter(title, order, [outline_node_id]) 创建空章节并拿到 chapter_id，"
+        "之后你输出的每个文本 delta 会被系统自动追加到该章节（边写边落库）。"
+        "**写完后**：调用 finalize_chapter(chapter_id) 标记完成。"
+        "**不要**用 create_chapter 一次性塞入完整正文。"
+    ),
     Phase.DONE: "项目已完成，可以协助润色或回顾。",
 }
 

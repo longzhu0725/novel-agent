@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import chat, chapters, characters, outline, projects, world, ws
+from app.api import advisors, chat, chapters, characters, outline, projects, world, ws
 
 
 @asynccontextmanager
@@ -30,4 +30,5 @@ app.include_router(characters.router)
 app.include_router(outline.router)
 app.include_router(chapters.router)
 app.include_router(chat.router)
+app.include_router(advisors.router)
 app.include_router(ws.router)

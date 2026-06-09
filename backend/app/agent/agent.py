@@ -11,7 +11,7 @@ from app.agent.tools import ToolContext, execute_tool, get_tools_for_phase
 from app.core.compression import compress_messages, should_compress
 from app.core.llm import LLMClient, LLMMessage
 from app.storage.file_repo import FileRepo
-from app.storage.models import ChatMessage, ProjectContext
+from app.storage.models import ChapterStatus, ChatMessage, ProjectContext
 from app.storage.sqlite_repo import SqliteRepo
 
 
@@ -38,6 +38,20 @@ class Agent:
         self.sqlite = sqlite
         self.file = file
         self.model_window = model_window
+
+    def _append_delta(self, project_id: str, chapter_id: str, delta: str) -> None:
+        """流式追加一段正文到章节（DB + 文件）。"""
+        if not delta:
+            return
+        ch = self.sqlite.get_chapter(chapter_id)
+        if ch is None or ch.project_id != project_id:
+            return
+        ch.content_md += delta
+        ch.word_count = sum(1 for c in ch.content_md if not c.isspace())
+        ch.status = ChapterStatus.DRAFT_PARTIAL
+        ch.updated_at = datetime.now()
+        self.sqlite.update_chapter(ch)
+        self.file.write_chapter(project_id, ch.order, ch.title, ch.content_md)
 
     def _build_context(
         self,
@@ -143,6 +157,8 @@ class Agent:
         messages, _ = await self._maybe_compress(ctx.project_id, phase, messages, summary)
 
         llm_tools = get_tools_for_phase(phase)
+        # 流式追加模式：begin_chapter 后每个 delta 自动 append
+        streaming_chapter_id: str | None = None
         for _ in range(MAX_TOOL_ROUNDS):
             text_parts: list[str] = []
             tool_evt: dict[str, Any] | None = None
@@ -150,6 +166,11 @@ class Agent:
                 async for ev in self.llm.stream_chat_events(messages, tools=llm_tools):
                     if ev["type"] == "delta":
                         text_parts.append(ev["text"])
+                        # 流式追加到章节
+                        if streaming_chapter_id is not None:
+                            self._append_delta(
+                                ctx.project_id, streaming_chapter_id, ev["text"]
+                            )
                         yield {"type": "delta", "text": ev["text"]}
                     elif ev["type"] == "tool_call":
                         tool_evt = ev
@@ -192,6 +213,17 @@ class Agent:
                 tool_evt["arguments"],
             )
             payload = {"ok": result.ok, "data": result.data, "error": result.error}
+            # 跟踪流式章节
+            if result.ok and isinstance(result.data, dict):
+                if tool_evt["name"] == "begin_chapter" and result.data.get("stream"):
+                    streaming_chapter_id = result.data["id"]
+                elif tool_evt["name"] == "finalize_chapter" and streaming_chapter_id == (
+                    result.data or {}
+                ).get("id"):
+                    streaming_chapter_id = None
+                    # 章节已完成，结束本轮循环
+                    yield {"type": "tool_result", "id": tool_evt["id"], "result": payload}
+                    break
             yield {"type": "tool_result", "id": tool_evt["id"], "result": payload}
             messages.append(
                 LLMMessage(

@@ -113,3 +113,50 @@ def test_read_project_summary(env):
     result = execute_tool(tool, _ctx(sq, fr, Phase.WORLD), {})
     assert result.ok
     assert result.data["current_phase"] == "WORLD"
+
+
+def test_begin_chapter_creates_empty_partial_chapter(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="begin_chapter", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WRITING),
+                          {"title": "楔子", "order": 1})
+    assert result.ok
+    chid = result.data["id"]
+    assert result.data["stream"] is True
+    ch = sq.get_chapter(chid)
+    assert ch is not None
+    assert ch.content_md == ""
+    assert ch.status.value == "draft_partial"
+    # 文件也写了
+    assert (fr.project_dir("p1") / "chapters" / "0001_楔子.md").is_file()
+
+
+def test_append_then_finalize_chapter(env):
+    sq, fr, _ = env
+    from app.agent.tools import ToolContext
+    ctx = _ctx(sq, fr, Phase.WRITING)
+    begin = execute_tool(LLMTool(name="begin_chapter", description="", parameters={}),
+                         ctx, {"title": "楔子", "order": 1})
+    chid = begin.data["id"]
+    for delta in ["夜色", "压山。", "剑", "鸣。"]:
+        execute_tool(LLMTool(name="append_to_chapter", description="", parameters={}),
+                     ctx, {"chapter_id": chid, "delta": delta})
+    ch = sq.get_chapter(chid)
+    assert ch.content_md == "夜色压山。剑鸣。"
+    assert ch.word_count == 8  # 夜色压山。剑鸣。= 8 非空白
+    assert ch.status.value == "draft_partial"
+    # 落盘
+    fpath = fr.project_dir("p1") / "chapters" / "0001_楔子.md"
+    assert fpath.read_text(encoding="utf-8") == "夜色压山。剑鸣。"
+    # finalize
+    res = execute_tool(LLMTool(name="finalize_chapter", description="", parameters={}),
+                       ctx, {"chapter_id": chid})
+    assert res.ok
+    assert sq.get_chapter(chid).status.value == "draft"
+
+
+def test_finalize_chapter_unknown_id(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="finalize_chapter", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WRITING), {"chapter_id": "nope"})
+    assert not result.ok
