@@ -1,6 +1,7 @@
 """应用配置，从环境变量加载。"""
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 from pydantic import SecretStr
@@ -27,12 +28,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
 
 
-_singleton: Settings | None = None
-
-
+@lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """获取全局单例 Settings。"""
-    global _singleton
-    if _singleton is None:
-        _singleton = Settings()  # type: ignore[call-arg]
-    return _singleton
+    return Settings()  # type: ignore[call-arg]

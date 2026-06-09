@@ -1,0 +1,115 @@
+"""工具注册表单元测试。"""
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+
+import pytest
+
+from app.agent.tools import (
+    ToolContext,
+    execute_tool,
+    get_tool_def,
+    get_tools_for_phase,
+)
+from app.core.llm import LLMTool
+from app.core.state_machine import Phase
+from app.storage.file_repo import FileRepo
+from app.storage.models import Project
+from app.storage.sqlite_repo import SqliteRepo
+
+
+@pytest.fixture
+def env(tmp_path):
+    sq = SqliteRepo(tmp_path / "test.db")
+    sq.init_schema()
+    fr = FileRepo(tmp_path / "projects")
+    p = Project(
+        id="p1",
+        name="x",
+        storage_dir="p1",
+        current_phase=Phase.WORLD,
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+    )
+    sq.insert_project(p)
+    fr.create_project("p1")
+    return sq, fr, p
+
+
+def _ctx(sq, fr, phase: Phase) -> ToolContext:
+    return ToolContext(project_id="p1", sqlite=sq, file=fr, project_phase=phase)
+
+
+def test_get_tools_for_phase_filters_by_phase():
+    tools = get_tools_for_phase(Phase.WORLD)
+    names = {t.name for t in tools}
+    assert "upsert_world_doc" in names
+    assert "create_character" not in names
+    assert "read_world_doc" in names
+
+
+def test_execute_tool_validates_required_args(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="create_character", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.CHARACTERS), {})
+    assert not result.ok and "缺少必填" in (result.error or "")
+
+
+def test_execute_tool_rejects_wrong_phase(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="create_character", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WORLD), {"name": "X"})
+    assert not result.ok and "不可用" in (result.error or "")
+
+
+def test_execute_tool_unknown_tool(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="nope", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WORLD), {})
+    assert not result.ok and "未知工具" in (result.error or "")
+
+
+def test_execute_tool_args_must_be_dict(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="read_world_doc", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WORLD), "not a dict")  # type: ignore[arg-type]
+    assert not result.ok
+
+
+def test_create_character_works(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="create_character", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.CHARACTERS), {"name": "林夕"})
+    assert result.ok and result.data and "id" in result.data
+    assert len(sq.list_characters("p1")) == 1
+
+
+def test_advance_phase_legal_transition(env):
+    sq, fr, p = env
+    # 推进 project 到 WORLD
+    tool = LLMTool(name="advance_phase", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WORLD), {"to": "CHARACTERS"})
+    assert result.ok
+    assert sq.get_project("p1").current_phase == Phase.CHARACTERS  # type: ignore[union-attr]
+
+
+def test_advance_phase_illegal_transition(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="advance_phase", description="", parameters={})
+    # 当前 WORLD, 试图直接到 WRITING
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WORLD), {"to": "WRITING"})
+    assert not result.ok
+
+
+def test_get_tool_def_known():
+    defn = get_tool_def("create_character")
+    assert defn is not None and defn.name == "create_character"
+
+
+def test_read_project_summary(env):
+    sq, fr, _ = env
+    tool = LLMTool(name="read_project_summary", description="", parameters={})
+    result = execute_tool(tool, _ctx(sq, fr, Phase.WORLD), {})
+    assert result.ok
+    assert result.data["current_phase"] == "WORLD"
