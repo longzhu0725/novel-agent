@@ -1,7 +1,14 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ProjectList from "./pages/ProjectList";
+import Workspace from "./pages/Workspace";
+
 export default function App() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center">
-      <h1 className="text-3xl font-bold">Novel Agent</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<ProjectList />} />
+        <Route path="/projects/:pid" element={<Workspace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
