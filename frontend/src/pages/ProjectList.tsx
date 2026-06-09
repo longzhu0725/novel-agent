@@ -65,11 +65,145 @@ function ConfirmDelete({
   );
 }
 
+function EditProjectModal({
+  project,
+  onClose,
+  onSaved,
+}: {
+  project: Project;
+  onClose: () => void;
+  onSaved: (p: Project) => void;
+}) {
+  const [name, setName] = useState(project.name);
+  const [logline, setLogline] = useState(project.logline);
+  const [genre, setGenre] = useState(project.genre);
+  const [styleNotes, setStyleNotes] = useState(project.style_notes);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const save = async () => {
+    if (!name.trim()) {
+      setErr("书名不可为空");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await api.patch<Project>(`/projects/${project.id}`, {
+        name: name.trim(),
+        logline: logline.trim(),
+        genre: genre.trim(),
+        style_notes: styleNotes.trim(),
+      });
+      onSaved(r.data);
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal-panel p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <div className="label-ornament text-xs">校阅</div>
+            <h3 className="font-display italic text-2xl text-parchment mt-1">
+              修订书目
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="btn btn-ghost btn-icon text-xl"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </div>
+        <p className="font-body italic text-parchment-dim text-sm mb-4">
+          书名、题材、卷首语、文风——可随时修订。
+        </p>
+
+        <div className="divider-gold" />
+
+        <div className="space-y-3 my-4">
+          <div>
+            <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+              书名
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input"
+              autoFocus
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+                题材
+              </label>
+              <input
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                className="input"
+                placeholder="玄幻 / 都市 / 历史……"
+              />
+            </div>
+            <div>
+              <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+                卷首语（一行）
+              </label>
+              <input
+                value={logline}
+                onChange={(e) => setLogline(e.target.value)}
+                className="input"
+                placeholder="一句话概括这个故事"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+              文风札记
+            </label>
+            <textarea
+              value={styleNotes}
+              onChange={(e) => setStyleNotes(e.target.value)}
+              className="textarea textarea-prose"
+              placeholder="给笔的一些偏好：句式长短、用词风格、参考作家……"
+              style={{ minHeight: "5rem" }}
+            />
+          </div>
+          {err && (
+            <p className="text-crimson text-sm font-body">{err}</p>
+          )}
+        </div>
+
+        <div className="divider-gold" />
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onClose} className="btn btn-ghost">
+            取消
+          </button>
+          <button onClick={save} disabled={busy} className="btn btn-primary">
+            {busy ? "正在修订……" : "定稿"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<Project | null>(null);
+  const [editing, setEditing] = useState<Project | null>(null);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
@@ -106,6 +240,10 @@ export default function ProjectList() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const onProjectSaved = (p: Project) => {
+    setProjects((prev) => prev.map((x) => (x.id === p.id ? p : x)));
   };
 
   return (
@@ -193,10 +331,15 @@ export default function ProjectList() {
                       <div className="font-display text-xl text-parchment leading-snug truncate">
                         {p.name}
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span className="phase-badge">
                           {PHASE_LABELS[p.current_phase] ?? p.current_phase}
                         </span>
+                        {p.genre && (
+                          <span className="font-ornament text-[10px] text-parchment-faint tracking-widest">
+                            · {p.genre} ·
+                          </span>
+                        )}
                         <span className="font-mono text-xs text-parchment-faint">
                           {formatDate(p.updated_at)}
                         </span>
@@ -213,7 +356,20 @@ export default function ProjectList() {
                   </div>
                 </div>
 
-                {/* 删除按钮 - 悬停时显现 */}
+                {/* 编辑按钮 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(p);
+                  }}
+                  className="absolute top-2 right-9 w-7 h-7 flex items-center justify-center text-parchment-faint hover:text-gold opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="修订此卷"
+                  aria-label="修订项目"
+                >
+                  ✎
+                </button>
+
+                {/* 删除按钮 */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -244,6 +400,15 @@ export default function ProjectList() {
           busy={busy}
           onCancel={() => setDeleting(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+
+      {/* 编辑项目 */}
+      {editing && (
+        <EditProjectModal
+          project={editing}
+          onClose={() => setEditing(null)}
+          onSaved={onProjectSaved}
         />
       )}
     </div>

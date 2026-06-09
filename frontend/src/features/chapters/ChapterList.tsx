@@ -50,6 +50,247 @@ function ConfirmDelete({
   );
 }
 
+function NewChapterModal({
+  pid,
+  defaultOrder,
+  onClose,
+  onCreated,
+}: {
+  pid: string;
+  defaultOrder: number;
+  onClose: () => void;
+  onCreated: (c: Chapter) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [order, setOrder] = useState<string>(String(defaultOrder));
+  const [outlineNodeId, setOutlineNodeId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const create = async () => {
+    if (!title.trim()) {
+      setErr("章名不可为空");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await api.post<Chapter>(`/projects/${pid}/chapters`, {
+        title: title.trim(),
+        order: Number(order) || defaultOrder,
+        outline_node_id: outlineNodeId.trim() || null,
+        content_md: "",
+      });
+      onCreated(r.data);
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal-panel p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <div className="label-ornament text-xs">新章</div>
+            <h3 className="font-display italic text-2xl text-parchment mt-1">
+              揭开一页新章
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="btn btn-ghost btn-icon text-xl"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </div>
+        <p className="font-body italic text-parchment-dim text-sm mb-4">
+          为下一节命名——可稍后再写正文。
+        </p>
+
+        <div className="divider-gold" />
+
+        <div className="space-y-3 my-4">
+          <div>
+            <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+              章名
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="input"
+              placeholder="第一章 · 长夜将明"
+              autoFocus
+            />
+          </div>
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <div>
+              <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+                关联纲目 id（可选）
+              </label>
+              <input
+                value={outlineNodeId}
+                onChange={(e) => setOutlineNodeId(e.target.value)}
+                className="input"
+                placeholder="如要关联到大纲节点，填其 id"
+              />
+            </div>
+            <div>
+              <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+                顺序
+              </label>
+              <input
+                type="number"
+                value={order}
+                onChange={(e) => setOrder(e.target.value)}
+                className="input w-20"
+              />
+            </div>
+          </div>
+          {err && <p className="text-crimson text-sm font-body">{err}</p>}
+        </div>
+
+        <div className="divider-gold" />
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onClose} className="btn btn-ghost">取消</button>
+          <button onClick={create} disabled={busy} className="btn btn-primary">
+            {busy ? "正在启页……" : "启页"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditChapterMetaModal({
+  chapter,
+  onClose,
+  onSaved,
+}: {
+  chapter: Chapter;
+  onClose: () => void;
+  onSaved: (c: Chapter) => void;
+}) {
+  const [title, setTitle] = useState(chapter.title);
+  const [order, setOrder] = useState(String(chapter.order));
+  const [status, setStatus] = useState(chapter.status);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const save = async () => {
+    if (!title.trim()) {
+      setErr("章名不可为空");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await api.patch<Chapter>(
+        `/projects/${chapter.project_id}/chapters/${chapter.id}`,
+        {
+          title: title.trim(),
+          order: Number(order) || chapter.order,
+          status,
+        },
+      );
+      onSaved(r.data);
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal-panel p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <div className="label-ornament text-xs">校阅</div>
+            <h3 className="font-display italic text-2xl text-parchment mt-1">
+              修订章节
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="btn btn-ghost btn-icon text-xl"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </div>
+        <p className="font-body italic text-parchment-dim text-sm mb-4">
+          标题、顺序、状态——正文在下方编辑区。
+        </p>
+
+        <div className="divider-gold" />
+
+        <div className="space-y-3 my-4">
+          <div>
+            <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+              章名
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="input"
+              autoFocus
+            />
+          </div>
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <div>
+              <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+                状态
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="input"
+              >
+                <option value="DRAFT">草稿</option>
+                <option value="DRAFT_PARTIAL">流式中</option>
+                <option value="REVIEWED">已审</option>
+                <option value="FINAL">完稿</option>
+              </select>
+            </div>
+            <div>
+              <label className="font-ornament text-xs text-gold tracking-widest block mb-1.5">
+                顺序
+              </label>
+              <input
+                type="number"
+                value={order}
+                onChange={(e) => setOrder(e.target.value)}
+                className="input w-20"
+              />
+            </div>
+          </div>
+          {err && <p className="text-crimson text-sm font-body">{err}</p>}
+        </div>
+
+        <div className="divider-gold" />
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onClose} className="btn btn-ghost">取消</button>
+          <button onClick={save} disabled={busy} className="btn btn-primary">
+            {busy ? "正在定稿……" : "定稿"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChapterList({ pid }: { pid: string }) {
   const { chapters, refreshChapters } = useProjectStore();
   const [active, setActive] = useState<string | null>(null);
@@ -57,6 +298,8 @@ export default function ChapterList({ pid }: { pid: string }) {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [deleting, setDeleting] = useState<Chapter | null>(null);
+  const [editingMeta, setEditingMeta] = useState<Chapter | null>(null);
+  const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -99,19 +342,42 @@ export default function ChapterList({ pid }: { pid: string }) {
     }
   };
 
+  const onMetaSaved = (c: Chapter) => {
+    void refreshChapters();
+    setEditingMeta(null);
+    setActive(c.id);
+    setContent(c.content_md);
+  };
+
+  const onCreated = (c: Chapter) => {
+    void refreshChapters();
+    setActive(c.id);
+    setContent(c.content_md);
+  };
+
   const activeChapter = chapters.find((c) => c.id === active);
+  const defaultOrder = (chapters.at(-1)?.order ?? 0) + 1;
 
   return (
     <div className="parchment p-6 md:p-8 animate-fade-in">
       {/* 标题 */}
-      <div className="mb-2">
-        <div className="label-ornament mb-1">肆 · 撰文</div>
-        <h2 className="font-display italic text-3xl text-parchment">
-          章回
-        </h2>
-        <p className="font-body italic text-parchment-dim text-sm mt-1">
-          落笔成章。每一个字，都是这卷不可分割的一部分。
-        </p>
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <div>
+          <div className="label-ornament mb-1">肆 · 撰文</div>
+          <h2 className="font-display italic text-3xl text-parchment">
+            章回
+          </h2>
+          <p className="font-body italic text-parchment-dim text-sm mt-1">
+            落笔成章。每一个字，都是这卷不可分割的一部分。
+            <span className="text-parchment-faint">（点击卡牌可修订）</span>
+          </p>
+        </div>
+        <button
+          onClick={() => setCreating(true)}
+          className="btn btn-primary shrink-0"
+        >
+          + 启新章
+        </button>
       </div>
 
       <div className="divider-gold" />
@@ -123,7 +389,7 @@ export default function ChapterList({ pid }: { pid: string }) {
             尚未开篇
           </p>
           <p className="text-parchment-faint text-sm mt-2">
-            请告知右侧的笔——它会为你揭幕第一章。
+            点右上角「启新章」，或请右侧的笔为你揭幕第一章。
           </p>
         </div>
       ) : (
@@ -138,9 +404,11 @@ export default function ChapterList({ pid }: { pid: string }) {
                 <li key={ch.id} className="relative group">
                   <button
                     onClick={() => open(ch)}
+                    onDoubleClick={() => setEditingMeta(ch)}
                     className={`index-card !p-3 text-left ${
                       ch.id === active ? "active" : ""
                     }`}
+                    title="单击打开，双击修订章节信息"
                   >
                     <div className="flex items-baseline gap-2">
                       <span className="font-mono text-xs text-parchment-faint">
@@ -165,7 +433,6 @@ export default function ChapterList({ pid }: { pid: string }) {
                       </span>
                     </div>
                   </button>
-                  {/* 章节小删除按钮 - 悬停时显现 */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -214,9 +481,17 @@ export default function ChapterList({ pid }: { pid: string }) {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setDeleting(activeChapter)}
+                    onClick={() => setEditingMeta(activeChapter)}
                     className="btn"
                     style={{ borderColor: "var(--leather-light)", color: "var(--parchment-faint)" }}
+                    title="修订章节元信息"
+                  >
+                    章节信息
+                  </button>
+                  <button
+                    onClick={() => setDeleting(activeChapter)}
+                    className="btn"
+                    style={{ borderColor: "var(--crimson)", color: "var(--crimson)" }}
                     title="删除此章"
                   >
                     焚稿
@@ -237,6 +512,21 @@ export default function ChapterList({ pid }: { pid: string }) {
           busy={busy}
           onCancel={() => setDeleting(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+      {editingMeta && (
+        <EditChapterMetaModal
+          chapter={editingMeta}
+          onClose={() => setEditingMeta(null)}
+          onSaved={onMetaSaved}
+        />
+      )}
+      {creating && (
+        <NewChapterModal
+          pid={pid}
+          defaultOrder={defaultOrder}
+          onClose={() => setCreating(false)}
+          onCreated={onCreated}
         />
       )}
     </div>

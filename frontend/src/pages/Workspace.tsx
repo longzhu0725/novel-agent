@@ -10,13 +10,6 @@ import ChapterList from "../features/chapters/ChapterList";
 import ChatPanel from "../features/chat/ChatPanel";
 import AdvisorPanel from "../features/advisors/AdvisorPanel";
 
-function uuid(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return Math.random().toString(36).slice(2);
-}
-
 const PHASE_TITLES: Record<string, { en: string; cn: string }> = {
   INIT: { en: "The First Page", cn: "落墨之前" },
   WORLD: { en: "World Building", cn: "构 · 世界观" },
@@ -25,6 +18,17 @@ const PHASE_TITLES: Record<string, { en: string; cn: string }> = {
   WRITING: { en: "The Manuscript", cn: "书 · 章节" },
   DONE: { en: "The Final Draft", cn: "成 · 完稿" },
 };
+
+function getSessionId(pid: string): string {
+  // 每项目一个稳定的 session_id，刷新页面后历史不丢
+  const key = `novel:session:${pid}`;
+  let sid = localStorage.getItem(key);
+  if (!sid) {
+    sid = `default-${pid}`;
+    localStorage.setItem(key, sid);
+  }
+  return sid;
+}
 
 export default function Workspace() {
   const { pid = "" } = useParams();
@@ -35,7 +39,7 @@ export default function Workspace() {
   useEffect(() => {
     if (pid) {
       load(pid);
-      connect(uuid(), pid);
+      connect(getSessionId(pid), pid);
     }
   }, [pid, load, connect]);
 
