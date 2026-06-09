@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 
@@ -133,7 +132,6 @@ def test_begin_chapter_creates_empty_partial_chapter(env):
 
 def test_append_then_finalize_chapter(env):
     sq, fr, _ = env
-    from app.agent.tools import ToolContext
     ctx = _ctx(sq, fr, Phase.WRITING)
     begin = execute_tool(LLMTool(name="begin_chapter", description="", parameters={}),
                          ctx, {"title": "楔子", "order": 1})

@@ -10,8 +10,9 @@ from app.agent.prompts import build_system_prompt
 from app.agent.tools import ToolContext, execute_tool, get_tools_for_phase
 from app.core.compression import compress_messages, should_compress
 from app.core.llm import LLMClient, LLMMessage
+from app.core.state_machine import Phase
 from app.storage.file_repo import FileRepo
-from app.storage.models import ChapterStatus, ChatMessage, ProjectContext
+from app.storage.models import ChapterStatus, ChatMessage, Project, ProjectContext
 from app.storage.sqlite_repo import SqliteRepo
 
 
@@ -55,8 +56,8 @@ class Agent:
 
     def _build_context(
         self,
-        project,
-        phase,
+        project: Project,
+        phase: Phase,
         history: list[ChatMessage],
         user_text: str,
         summary: str,
@@ -74,7 +75,7 @@ class Agent:
     async def _maybe_compress(
         self,
         project_id: str,
-        phase,
+        phase: Phase,
         messages: list[LLMMessage],
         summary: str,
     ) -> tuple[list[LLMMessage], str]:
@@ -108,7 +109,7 @@ class Agent:
         )
         result = await compress_messages(
             messages,
-            llm=_OneShot(self.llm, sys_c),  # type: ignore[arg-type]
+            llm=_OneShot(self.llm, sys_c),
             existing_summary=summary,
             keep_ratio=KEEP_RATIO,
         )

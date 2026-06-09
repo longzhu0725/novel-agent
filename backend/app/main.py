@@ -1,5 +1,6 @@
 """FastAPI 入口。"""
 from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
 from fastapi import FastAPI
 
@@ -7,7 +8,7 @@ from app.api import advisors, chat, chapters, characters, outline, projects, wor
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # 触发依赖注入并初始化 schema
     from app.api.deps import get_file_repo, get_sqlite_repo
 

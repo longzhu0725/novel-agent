@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
@@ -47,7 +48,7 @@ async def ws_chat(
         return
     session = REGISTRY.register(project_id, session_id)
 
-    async def _send(msg: dict) -> None:
+    async def _send(msg: dict[str, Any]) -> None:
         await ws.send_json(msg)
 
     session.bind(_send)

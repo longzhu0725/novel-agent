@@ -1,7 +1,7 @@
 """LLMClient 单元测试。"""
 from __future__ import annotations
 
-from typing import Any, AsyncIterator
+from typing import Any
 
 import pytest
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
+from typing import Any
 
 
 class FileRepo:
@@ -39,7 +40,7 @@ class FileRepo:
         p.write_text(content, encoding="utf-8")
         return p
 
-    def write_character(self, pid: str, cid: str, data: dict) -> Path:
+    def write_character(self, pid: str, cid: str, data: dict[str, Any]) -> Path:
         p = self.root / pid / "characters" / f"{cid}.json"
         p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         return p

@@ -27,7 +27,7 @@ class LLMTool:
 
 
 class Transport(Protocol):
-    async def stream(self, url: str, headers: dict[str, str], body: dict[str, Any]) -> AsyncIterator[dict[str, Any]]: ...
+    def stream(self, url: str, headers: dict[str, str], body: dict[str, Any]) -> AsyncIterator[dict[str, Any]]: ...
 
 
 class HttpxTransport:
@@ -39,7 +39,9 @@ class HttpxTransport:
             self._client = httpx.AsyncClient(timeout=httpx.Timeout(60.0, read=60.0))
         return self._client
 
-    async def stream(self, url: str, headers: dict[str, str], body: dict[str, Any]):
+    async def stream(
+        self, url: str, headers: dict[str, str], body: dict[str, Any]
+    ) -> AsyncIterator[dict[str, Any]]:
         client = await self._get()
         async with client.stream("POST", url, json=body, headers=headers) as r:
             if r.status_code in (401, 403):
@@ -90,7 +92,7 @@ class LLMClient:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
-        self._transport: Transport = _transport or HttpxTransport()  # type: ignore[assignment]
+        self._transport: Transport = _transport or HttpxTransport()
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -137,7 +139,7 @@ class LLMClient:
                     current_args = (item.get("function") or {}).get("arguments") or ""
                 else:
                     current_args += (item.get("function") or {}).get("arguments") or ""
-            if (finish := choice.get("finish_reason")) and current_tool is not None:
+            if choice.get("finish_reason") and current_tool is not None:
                 try:
                     current_tool["arguments"] = json.loads(current_args or "{}")
                 except json.JSONDecodeError:

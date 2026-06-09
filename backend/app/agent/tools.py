@@ -317,7 +317,7 @@ class ToolDef:
     impl: Callable[[ToolContext, dict[str, Any]], ToolResult]
 
 
-def _schema(props: dict, required: list[str]) -> dict[str, Any]:
+def _schema(props: dict[str, Any], required: list[str]) -> dict[str, Any]:
     return {"type": "object", "properties": props, "required": required}
 
 

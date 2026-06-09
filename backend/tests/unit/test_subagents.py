@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, AsyncIterator
+from typing import Any
 
 import pytest
 
 from app.agent.subagents import (
-    ProjectContext,
     build_project_context,
     consult_outline_expert,
     consult_reviewer,

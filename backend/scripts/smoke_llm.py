@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -124,7 +123,6 @@ async def main() -> None:
         await _run_advisor(sq, fr, p, llm)
     finally:
         # 清理：smoke 项目不入库
-        from app.storage.sqlite_repo import SqliteRepo as _Sq
 
         # 不删除数据库，只把测试项目文件删了
         import shutil
