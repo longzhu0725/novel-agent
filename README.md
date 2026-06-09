@@ -17,6 +17,10 @@ v0 设计稿已就绪（见 [`docs/superpowers/specs/2026-06-09-novel-agent-desi
 
 > v0 实施完成后补：克隆、配置 `.env`、启动后端与前端。
 
+## 仓库
+
+远程：<https://github.com/longzhu0725/novel-agent>
+
 ## 文档
 
 - 设计文档：[`docs/superpowers/specs/2026-06-09-novel-agent-design.md`](docs/superpowers/specs/2026-06-09-novel-agent-design.md)
