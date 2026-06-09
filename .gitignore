@@ -25,7 +25,8 @@ dist/
 .DS_Store
 
 # Runtime data
-backend/data/
+backend/data/*
+!backend/data/.gitkeep
 
 # Environment artifacts
 .uploads/
