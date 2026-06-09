@@ -19,9 +19,52 @@ function formatDate(s: string): string {
   }
 }
 
+function ConfirmDelete({
+  name,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  name: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-panel p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="label-ornament text-xs text-crimson mb-2">除名</div>
+        <h3 className="font-display italic text-2xl text-parchment mb-3">
+          确认删除此人物？
+        </h3>
+        <p className="font-body text-parchment-dim mb-1">
+          <span className="text-gold">{name}</span> 将从名册中划去——
+        </p>
+        <p className="font-body italic text-parchment-faint text-sm mb-5">
+          此举无法挽回。
+        </p>
+        <div className="divider-gold" />
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onCancel} className="btn btn-ghost">收手</button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="btn"
+            style={{ borderColor: "var(--crimson)", color: "var(--crimson)" }}
+          >
+            {busy ? "正在划去……" : "划去其名"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CharacterList({ pid }: { pid: string }) {
   const { characters, refreshCharacters } = useProjectStore();
   const [name, setName] = useState("");
+  const [deleting, setDeleting] = useState<Character | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     refreshCharacters();
@@ -33,6 +76,18 @@ export default function CharacterList({ pid }: { pid: string }) {
     await api.post(`/projects/${pid}/characters`, { name: trimmed });
     setName("");
     await refreshCharacters();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setBusy(true);
+    try {
+      await api.delete(`/projects/${pid}/characters/${deleting.id}`);
+      setDeleting(null);
+      await refreshCharacters();
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -77,8 +132,16 @@ export default function CharacterList({ pid }: { pid: string }) {
       ) : (
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {characters.map((c: Character) => (
-            <li key={c.id} className="index-card">
-              <div className="flex items-baseline justify-between gap-2 mb-2">
+            <li key={c.id} className="index-card relative group">
+              <button
+                onClick={() => setDeleting(c)}
+                className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-parchment-faint hover:text-crimson opacity-0 group-hover:opacity-100 transition-opacity"
+                title="删除人物"
+                aria-label="删除人物"
+              >
+                ×
+              </button>
+              <div className="flex items-baseline justify-between gap-2 mb-2 pr-6">
                 <h3 className="font-display text-xl text-parchment leading-tight">
                   {c.name}
                 </h3>
@@ -106,6 +169,15 @@ export default function CharacterList({ pid }: { pid: string }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {deleting && (
+        <ConfirmDelete
+          name={deleting.name}
+          busy={busy}
+          onCancel={() => setDeleting(null)}
+          onConfirm={confirmDelete}
+        />
       )}
     </div>
   );

@@ -20,29 +20,88 @@ function buildTree(list: OutlineNode[]): Node[] {
   return roots.sort((a, b) => a.order - b.order);
 }
 
-function Tree({ nodes, depth = 0 }: { nodes: Node[]; depth?: number }) {
+function Tree({
+  nodes,
+  onDelete,
+  depth = 0,
+}: {
+  nodes: Node[];
+  onDelete: (n: OutlineNode) => void;
+  depth?: number;
+}) {
   if (nodes.length === 0) return null;
   return (
     <div className={depth === 0 ? "" : "ml-4"}>
       {nodes.map((n) => (
-        <div key={n.id} className="outline-node">
+        <div key={n.id} className="outline-node group">
           <div className="flex items-baseline gap-2">
             <span className="font-mono text-xs text-parchment-faint">
               {String(n.order).padStart(2, "0")}
             </span>
-            <span className="outline-title">{n.title}</span>
+            <span className="outline-title flex-1">{n.title}</span>
             {n.chapter_id && (
-              <span className="font-ornament text-[10px] text-gold tracking-widest ml-auto">
+              <span className="font-ornament text-[10px] text-gold tracking-widest">
                 章节
               </span>
             )}
+            <button
+              onClick={() => onDelete(n)}
+              className="ml-1 w-5 h-5 flex items-center justify-center text-parchment-faint hover:text-crimson opacity-0 group-hover:opacity-100 transition-opacity"
+              title="删除纲目"
+              aria-label="删除节点"
+            >
+              ×
+            </button>
           </div>
           {n.summary_md && (
             <p className="outline-summary">{n.summary_md}</p>
           )}
-          {n.children.length > 0 && <Tree nodes={n.children} depth={depth + 1} />}
+          {n.children.length > 0 && (
+            <Tree nodes={n.children} onDelete={onDelete} depth={depth + 1} />
+          )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function ConfirmDelete({
+  title,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-panel p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="label-ornament text-xs text-crimson mb-2">删节</div>
+        <h3 className="font-display italic text-2xl text-parchment mb-3">
+          确认删除此纲目？
+        </h3>
+        <p className="font-body text-parchment-dim mb-1">
+          <span className="text-gold">{title}</span> 将从骨架中抹去——
+        </p>
+        <p className="font-body italic text-parchment-faint text-sm mb-5">
+          子纲目亦将一并消逝。
+        </p>
+        <div className="divider-gold" />
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onCancel} className="btn btn-ghost">收手</button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="btn"
+            style={{ borderColor: "var(--crimson)", color: "var(--crimson)" }}
+          >
+            {busy ? "正在删节……" : "删去此节"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -51,6 +110,8 @@ export default function OutlineTree({ pid }: { pid: string }) {
   const { outline, refreshOutline } = useProjectStore();
   const [title, setTitle] = useState("");
   const [parentId, setParentId] = useState<string>("");
+  const [deleting, setDeleting] = useState<OutlineNode | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     refreshOutline();
@@ -67,6 +128,18 @@ export default function OutlineTree({ pid }: { pid: string }) {
     setTitle("");
     setParentId("");
     await refreshOutline();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setBusy(true);
+    try {
+      await api.delete(`/projects/${pid}/outline/${deleting.id}`);
+      setDeleting(null);
+      await refreshOutline();
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -116,9 +189,18 @@ export default function OutlineTree({ pid }: { pid: string }) {
             </p>
           </div>
         ) : (
-          <Tree nodes={buildTree(outline)} />
+          <Tree nodes={buildTree(outline)} onDelete={setDeleting} />
         )}
       </div>
+
+      {deleting && (
+        <ConfirmDelete
+          title={deleting.title}
+          busy={busy}
+          onCancel={() => setDeleting(null)}
+          onConfirm={confirmDelete}
+        />
+      )}
     </div>
   );
 }

@@ -40,6 +40,13 @@ class FileRepo:
         p.write_text(content, encoding="utf-8")
         return p
 
+    def delete_chapter_files(self, pid: str, order: int, title: str) -> None:
+        """删除对应章节的 .md 文件（按 order + title 推断文件名）。"""
+        safe = _safe(title) or "untitled"
+        p = self.root / pid / "chapters" / f"{order:04d}_{safe}.md"
+        if p.exists():
+            p.unlink()
+
     def write_character(self, pid: str, cid: str, data: dict[str, Any]) -> Path:
         p = self.root / pid / "characters" / f"{cid}.json"
         p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

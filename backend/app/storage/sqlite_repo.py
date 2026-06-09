@@ -295,6 +295,10 @@ class SqliteRepo:
             ).fetchall()
         return [self._row_to_chapter(r) for r in rows]
 
+    def delete_chapter(self, chid: str) -> None:
+        with self._conn() as c:
+            c.execute("DELETE FROM chapters WHERE id=?", (chid,))
+
     # ---------- ChatMessage ----------
     def insert_chat_message(self, m: ChatMessage) -> None:
         with self._conn() as c:

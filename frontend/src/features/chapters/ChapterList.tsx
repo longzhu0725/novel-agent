@@ -9,12 +9,55 @@ const STATUS_LABELS: Record<string, { cn: string; color: string }> = {
   FINAL: { cn: "完稿", color: "text-gold border-gold" },
 };
 
+function ConfirmDelete({
+  title,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-panel p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="label-ornament text-xs text-crimson mb-2">焚稿</div>
+        <h3 className="font-display italic text-2xl text-parchment mb-3">
+          确认删除此章？
+        </h3>
+        <p className="font-body text-parchment-dim mb-1">
+          <span className="text-gold">{title}</span> 将被永久焚稿——
+        </p>
+        <p className="font-body italic text-parchment-faint text-sm mb-5">
+          正本（Markdown）亦将随之湮灭，无法挽回。
+        </p>
+        <div className="divider-gold" />
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onCancel} className="btn btn-ghost">收手</button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="btn"
+            style={{ borderColor: "var(--crimson)", color: "var(--crimson)" }}
+          >
+            {busy ? "正在焚稿……" : "焚毁此稿"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChapterList({ pid }: { pid: string }) {
   const { chapters, refreshChapters } = useProjectStore();
   const [active, setActive] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [deleting, setDeleting] = useState<Chapter | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     refreshChapters();
@@ -37,6 +80,22 @@ export default function ChapterList({ pid }: { pid: string }) {
       setSavedAt(new Date());
     } finally {
       setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setBusy(true);
+    try {
+      await api.delete(`/projects/${pid}/chapters/${deleting.id}`);
+      if (active === deleting.id) {
+        setActive(null);
+        setContent("");
+      }
+      setDeleting(null);
+      await refreshChapters();
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -76,7 +135,7 @@ export default function ChapterList({ pid }: { pid: string }) {
                 color: "text-parchment-faint border-leather",
               };
               return (
-                <li key={ch.id}>
+                <li key={ch.id} className="relative group">
                   <button
                     onClick={() => open(ch)}
                     className={`index-card !p-3 text-left ${
@@ -105,6 +164,18 @@ export default function ChapterList({ pid }: { pid: string }) {
                         {ch.word_count} 字
                       </span>
                     </div>
+                  </button>
+                  {/* 章节小删除按钮 - 悬停时显现 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleting(ch);
+                    }}
+                    className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center bg-ink-soft border border-leather rounded-full text-parchment-faint hover:text-crimson hover:border-crimson opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    title="删除章节"
+                    aria-label="删除章节"
+                  >
+                    ×
                   </button>
                 </li>
               );
@@ -141,13 +212,32 @@ export default function ChapterList({ pid }: { pid: string }) {
                     <span>未保存的改动将随风散去</span>
                   )}
                 </div>
-                <button onClick={save} disabled={saving} className="btn btn-primary">
-                  {saving ? "正在落卷……" : "封存此页"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDeleting(activeChapter)}
+                    className="btn"
+                    style={{ borderColor: "var(--leather-light)", color: "var(--parchment-faint)" }}
+                    title="删除此章"
+                  >
+                    焚稿
+                  </button>
+                  <button onClick={save} disabled={saving} className="btn btn-primary">
+                    {saving ? "正在落卷……" : "封存此页"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </>
+      )}
+
+      {deleting && (
+        <ConfirmDelete
+          title={deleting.title}
+          busy={busy}
+          onCancel={() => setDeleting(null)}
+          onConfirm={confirmDelete}
+        />
       )}
     </div>
   );

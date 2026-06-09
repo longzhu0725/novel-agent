@@ -21,10 +21,56 @@ function formatDate(s: string): string {
   }
 }
 
+function ConfirmDelete({
+  name,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  name: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-panel p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="label-ornament text-xs text-crimson mb-2">焚书</div>
+        <h3 className="font-display italic text-2xl text-parchment mb-3">
+          确认删除此卷？
+        </h3>
+        <p className="font-body text-parchment-dim mb-1">
+          <span className="text-gold">{name}</span> 将被永久焚毁——
+        </p>
+        <p className="font-body italic text-parchment-faint text-sm mb-5">
+          人物、世界观、章节、对话……一切随风散去，无法挽回。
+        </p>
+        <div className="divider-gold" />
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onCancel} className="btn btn-ghost">收手</button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="btn"
+            style={{
+              borderColor: "var(--crimson)",
+              color: "var(--crimson)",
+            }}
+          >
+            {busy ? "正在焚卷……" : "焚毁此卷"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<Project | null>(null);
+  const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -48,6 +94,18 @@ export default function ProjectList() {
     setName("");
     await load();
     navigate(`/projects/${p.id}`);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setBusy(true);
+    try {
+      await api.delete(`/projects/${deleting.id}`);
+      setDeleting(null);
+      await load();
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -123,33 +181,50 @@ export default function ProjectList() {
             {projects.map((p, i) => (
               <li
                 key={p.id}
-                className="book-spine px-5 py-4 animate-fade-in-up"
+                className="book-spine px-5 py-4 animate-fade-in-up relative group"
                 style={{ animationDelay: `${0.1 * i}s` }}
-                onClick={() => navigate(`/projects/${p.id}`)}
               >
-                <div className="flex items-start justify-between gap-3 pl-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-display text-xl text-parchment leading-snug truncate">
-                      {p.name}
+                <div
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/projects/${p.id}`)}
+                >
+                  <div className="flex items-start justify-between gap-3 pl-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-display text-xl text-parchment leading-snug truncate">
+                        {p.name}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="phase-badge">
+                          {PHASE_LABELS[p.current_phase] ?? p.current_phase}
+                        </span>
+                        <span className="font-mono text-xs text-parchment-faint">
+                          {formatDate(p.updated_at)}
+                        </span>
+                      </div>
+                      {p.logline && (
+                        <p className="font-body italic text-parchment-dim text-sm mt-2 line-clamp-2">
+                          {p.logline}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="phase-badge">
-                        {PHASE_LABELS[p.current_phase] ?? p.current_phase}
-                      </span>
-                      <span className="font-mono text-xs text-parchment-faint">
-                        {formatDate(p.updated_at)}
-                      </span>
+                    <div className="text-gold opacity-60 self-center text-xl font-display">
+                      ›
                     </div>
-                    {p.logline && (
-                      <p className="font-body italic text-parchment-dim text-sm mt-2 line-clamp-2">
-                        {p.logline}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-gold opacity-60 group-hover:opacity-100 self-center text-xl font-display">
-                    ›
                   </div>
                 </div>
+
+                {/* 删除按钮 - 悬停时显现 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleting(p);
+                  }}
+                  className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center text-parchment-faint hover:text-crimson opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="删除此卷"
+                  aria-label="删除项目"
+                >
+                  ×
+                </button>
               </li>
             ))}
           </ul>
@@ -161,6 +236,16 @@ export default function ProjectList() {
       <footer className="text-center text-parchment-faint text-xs font-ornament tracking-widest py-6">
         SCRIBE · QUILL · CANDLE
       </footer>
+
+      {/* 删除确认 */}
+      {deleting && (
+        <ConfirmDelete
+          name={deleting.name}
+          busy={busy}
+          onCancel={() => setDeleting(null)}
+          onConfirm={confirmDelete}
+        />
+      )}
     </div>
   );
 }
