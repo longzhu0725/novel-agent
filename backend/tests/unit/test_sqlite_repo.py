@@ -87,7 +87,6 @@ def test_legacy_phase_migration(tmp_path):
     """老 phase 字符串在 init_schema 时应被迁移到新 phase。"""
     r = SqliteRepo(tmp_path / "test.db")
     r.init_schema()
-    import sqlite3
     with r._conn() as c:
         c.execute(
             "INSERT INTO projects (id, name, storage_dir, current_phase, created_at, updated_at) "
