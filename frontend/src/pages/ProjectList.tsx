@@ -4,10 +4,8 @@ import { api, type Project } from "../api/client";
 
 const PHASE_LABELS: Record<string, string> = {
   INIT: "起 · 构想",
-  WORLD: "壹 · 世界",
-  CHARACTERS: "贰 · 人物",
-  OUTLINE: "叁 · 纲目",
-  WRITING: "肆 · 撰文",
+  FOUNDATION: "壹 · 基础",
+  WRITING: "贰 · 撰文",
   DONE: "终 · 完稿",
 };
 

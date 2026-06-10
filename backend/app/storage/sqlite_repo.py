@@ -105,7 +105,6 @@ class SqliteRepo:
                     "UPDATE projects SET current_phase = ? WHERE id = ?",
                     (new_phase.value, r["id"]),
                 )
-
     # ---------- Project ----------
     def insert_project(self, p: Project) -> None:
         with self._conn() as c:
