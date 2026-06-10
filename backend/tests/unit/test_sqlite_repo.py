@@ -71,8 +71,8 @@ def test_update_project_phase(repo):
     p = Project(id="p1", name="x", storage_dir="p1", current_phase=Phase.INIT,
                 created_at=datetime(2026, 6, 9), updated_at=datetime(2026, 6, 9))
     repo.insert_project(p)
-    repo.update_project_phase("p1", Phase.WORLD, datetime(2026, 6, 10))
-    assert repo.get_project("p1").current_phase == Phase.WORLD  # type: ignore[union-attr]
+    repo.update_project_phase("p1", Phase.FOUNDATION, datetime(2026, 6, 10))
+    assert repo.get_project("p1").current_phase == Phase.FOUNDATION  # type: ignore[union-attr]
 
 
 def test_delete_project(repo):
@@ -81,6 +81,31 @@ def test_delete_project(repo):
     repo.insert_project(p)
     repo.delete_project("p1")
     assert repo.get_project("p1") is None
+
+
+def test_legacy_phase_migration(tmp_path):
+    """老 phase 字符串在 init_schema 时应被迁移到新 phase。"""
+    r = SqliteRepo(tmp_path / "test.db")
+    r.init_schema()
+    with r._conn() as c:
+        c.execute(
+            "INSERT INTO projects (id, name, storage_dir, current_phase, created_at, updated_at) "
+            "VALUES ('a','A','a','WORLD','2026-06-09','2026-06-09')"
+        )
+        c.execute(
+            "INSERT INTO projects (id, name, storage_dir, current_phase, created_at, updated_at) "
+            "VALUES ('b','B','b','CHARACTERS','2026-06-09','2026-06-09')"
+        )
+        c.execute(
+            "INSERT INTO projects (id, name, storage_dir, current_phase, created_at, updated_at) "
+            "VALUES ('c','C','c','OUTLINE','2026-06-09','2026-06-09')"
+        )
+    # 重新打开：触发迁移
+    r2 = SqliteRepo(tmp_path / "test.db")
+    r2.init_schema()
+    assert r2.get_project("a").current_phase == Phase.FOUNDATION
+    assert r2.get_project("b").current_phase == Phase.FOUNDATION
+    assert r2.get_project("c").current_phase == Phase.WRITING
 
 
 def test_world_doc_upsert_increments_version(repo):
@@ -165,11 +190,11 @@ def test_chat_message_history(repo):
 
 
 def test_project_context_upsert(repo):
-    ctx = ProjectContext(project_id="p1", phase=Phase.WORLD,
+    ctx = ProjectContext(project_id="p1", phase=Phase.FOUNDATION,
                          rolling_summary="已生成设定", last_active_at=datetime(2026, 6, 9))
     repo.upsert_project_context(ctx)
     got = repo.get_project_context("p1")
-    assert got is not None and got.phase == Phase.WORLD
-    ctx.phase = Phase.CHARACTERS
+    assert got is not None and got.phase == Phase.FOUNDATION
+    ctx.phase = Phase.WRITING
     repo.upsert_project_context(ctx)
-    assert repo.get_project_context("p1").phase == Phase.CHARACTERS  # type: ignore[union-attr]
+    assert repo.get_project_context("p1").phase == Phase.WRITING  # type: ignore[union-attr]

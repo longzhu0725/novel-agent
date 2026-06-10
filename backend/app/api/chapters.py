@@ -104,3 +104,17 @@ def get_chapter(
 def _count_words(s: str) -> int:
     # 中英文混合按字符计，空白不计
     return sum(1 for c in s if not c.isspace())
+
+
+@router.delete("/{chid}", status_code=204)
+def delete_chapter(
+    pid: str,
+    chid: str,
+    repo: SqliteRepo = Depends(get_sqlite_repo),
+    fr: FileRepo = Depends(get_file_repo),
+) -> None:
+    ch = repo.get_chapter(chid)
+    if ch is None or ch.project_id != pid:
+        return
+    repo.delete_chapter(chid)
+    fr.delete_chapter_files(pid, ch.order, ch.title)

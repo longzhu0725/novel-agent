@@ -1,33 +1,43 @@
 import { useState } from "react";
 import { api } from "../../api/client";
+import Modal from "../../components/Modal";
 
 type Advisor = "outline" | "style" | "reviewer";
 
-const ADVISOR_META: Record<Advisor, { label: string; icon: string; color: string; desc: string; fields: { key: string; label: string; type: "text" | "textarea" }[] }> = {
+const ADVISOR_META: Record<
+  Advisor,
+  {
+    label: string;
+    glyph: string;        // 字符画符号（衬线字体下表现力更强）
+    cn: string;
+    desc: string;
+    fields: { key: string; label: string; type: "text" | "textarea"; placeholder?: string }[];
+  }
+> = {
   outline: {
-    label: "大纲专家",
-    icon: "📐",
-    color: "bg-purple-50 border-purple-300",
-    desc: "情节结构、伏笔、节奏",
-    fields: [{ key: "question", label: "问题", type: "textarea" }],
+    label: "Outline",
+    cn: "纲目专家",
+    glyph: "§",
+    desc: "结构、伏笔、节奏——骨架的审读者。",
+    fields: [{ key: "question", label: "询问", type: "textarea", placeholder: "你想请教什么？" }],
   },
   style: {
-    label: "风格专家",
-    icon: "🎨",
-    color: "bg-pink-50 border-pink-300",
-    desc: "口吻、用词、节奏",
+    label: "Style",
+    cn: "风格专家",
+    glyph: "✒",
+    desc: "口吻、用词、韵律——文字的聆听者。",
     fields: [
-      { key: "text", label: "要评审的文本", type: "textarea" },
-      { key: "focus", label: "关注点（可选）", type: "text" },
+      { key: "text", label: "需评议的文本", type: "textarea", placeholder: "将原文粘贴于此……" },
+      { key: "focus", label: "关注点（可选）", type: "text", placeholder: "如：用词、画面感" },
     ],
   },
   reviewer: {
-    label: "评审专家",
-    icon: "🔍",
-    color: "bg-amber-50 border-amber-300",
-    desc: "一致性、伏笔、节奏",
+    label: "Review",
+    cn: "评审专家",
+    glyph: "✦",
+    desc: "一致、伏笔、人物——故事的守门人。",
     fields: [
-      { key: "target", label: "评审目标", type: "textarea" },
+      { key: "target", label: "评审目标", type: "textarea", placeholder: "描述要评审的章节或情节……" },
       { key: "content_id", label: "章节 ID（可选）", type: "text" },
     ],
   },
@@ -62,9 +72,22 @@ export default function AdvisorPanel({ pid }: { pid: string }) {
   };
 
   return (
-    <div className="bg-white rounded p-3 shadow space-y-2">
-      <h2 className="font-semibold text-sm">AI 团队</h2>
-      <div className="grid grid-cols-3 gap-1">
+    <div className="parchment p-5 animate-fade-in">
+      {/* 标题 */}
+      <div className="flex items-baseline justify-between mb-3">
+        <div>
+          <div className="label-ornament text-xs">智囊</div>
+          <h2 className="font-display italic text-2xl text-parchment">
+            顾问<span className="text-gold"> ·</span> 三人
+          </h2>
+        </div>
+        <span className="font-mono text-xs text-parchment-faint">3</span>
+      </div>
+
+      <div className="divider-gold" />
+
+      {/* 顾问卡片 */}
+      <div className="grid grid-cols-3 gap-2">
         {(Object.keys(ADVISOR_META) as Advisor[]).map((k) => {
           const m = ADVISOR_META[k];
           return (
@@ -75,32 +98,64 @@ export default function AdvisorPanel({ pid }: { pid: string }) {
                 setForm({});
                 setAdvice(null);
               }}
-              className={`p-2 rounded border text-xs ${m.color} hover:opacity-80`}
+              className="advisor-card"
               title={m.desc}
             >
-              <div className="text-lg">{m.icon}</div>
-              <div className="font-medium">{m.label}</div>
+              <span className="advisor-glyph">{m.glyph}</span>
+              <div className="advisor-name">{m.label}</div>
+              <div className="font-ornament text-[9px] text-parchment-faint tracking-widest mt-1">
+                {m.cn}
+              </div>
             </button>
           );
         })}
       </div>
 
+      {/* 模态 */}
       {open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setOpen(null)}>
-          <div className="bg-white rounded-lg shadow-xl p-5 w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-bold">
-                {ADVISOR_META[open].icon} 咨询 {ADVISOR_META[open].label}
-              </h3>
-              <button onClick={() => setOpen(null)} className="text-slate-500 hover:text-slate-800">✕</button>
+        <Modal
+          open
+          onClose={() => setOpen(null)}
+          ariaLabel={ADVISOR_META[open].label}
+        >
+          <div className="p-6">
+            {/* 模态头 */}
+            <div className="flex items-start justify-between mb-1">
+              <div>
+                <div className="label-ornament text-xs">
+                  {ADVISOR_META[open].cn} · {ADVISOR_META[open].label}
+                </div>
+                <h3 className="font-display italic text-2xl text-parchment mt-1 flex items-center gap-2">
+                  <span className="text-gold text-3xl not-italic font-display">
+                    {ADVISOR_META[open].glyph}
+                  </span>
+                  <span>请益</span>
+                </h3>
+              </div>
+              <button
+                onClick={() => setOpen(null)}
+                className="btn btn-ghost btn-icon text-xl"
+                aria-label="关闭"
+              >
+                ×
+              </button>
             </div>
-            <p className="text-xs text-slate-500 mb-3">{ADVISOR_META[open].desc}</p>
-            <div className="space-y-2 mb-3 overflow-y-auto">
+            <p className="font-body italic text-parchment-dim text-sm mb-4">
+              {ADVISOR_META[open].desc}
+            </p>
+
+            <div className="divider-gold" />
+
+            {/* 表单 */}
+            <div className="space-y-3 my-4 overflow-y-auto" style={{ maxHeight: "30vh" }}>
               {ADVISOR_META[open].fields.map((f) => {
                 const inputId = `advisor-${open}-${f.key}`;
                 return (
                   <div key={f.key}>
-                    <label htmlFor={inputId} className="text-sm text-slate-700">
+                    <label
+                      htmlFor={inputId}
+                      className="font-ornament text-xs text-gold tracking-widest block mb-1.5"
+                    >
                       {f.label}
                     </label>
                     {f.type === "textarea" ? (
@@ -108,40 +163,55 @@ export default function AdvisorPanel({ pid }: { pid: string }) {
                         id={inputId}
                         value={form[f.key] ?? ""}
                         onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                        className="w-full border rounded p-2 text-sm h-24"
+                        className="textarea textarea-prose"
+                        placeholder={f.placeholder}
+                        style={{ minHeight: "6rem" }}
                       />
                     ) : (
                       <input
                         id={inputId}
                         value={form[f.key] ?? ""}
                         onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                        className="w-full border rounded p-2 text-sm"
+                        className="input"
+                        placeholder={f.placeholder}
                       />
                     )}
                   </div>
                 );
               })}
             </div>
+
+            {/* 操作 */}
             <div className="flex gap-2 justify-end mb-3">
-              <button onClick={() => setOpen(null)} className="px-3 py-1 text-sm border rounded">
-                取消
-              </button>
               <button
-                onClick={submit}
-                disabled={loading}
-                className="bg-blue-600 text-white px-4 py-1 text-sm rounded disabled:opacity-50"
+                onClick={() => setOpen(null)}
+                className="btn btn-ghost"
               >
-                {loading ? "咨询中…" : "提交"}
+                收起
+              </button>
+              <button onClick={submit} disabled={loading} className="btn btn-primary">
+                {loading ? (
+                  <>
+                    <span>顾问沉吟</span>
+                    <span className="ellipsis" />
+                  </>
+                ) : (
+                  "请益"
+                )}
               </button>
             </div>
+
+            {/* 答复 */}
             {advice && (
-              <div className="border-t pt-3 overflow-y-auto flex-1">
-                <div className="text-xs text-slate-500 mb-1">来自 {advice.advisor}</div>
-                <pre className="whitespace-pre-wrap text-sm font-sans">{advice.advice}</pre>
+              <div className="border-t border-gold pt-4 overflow-y-auto flex-1 animate-fade-in">
+                <div className="label-ornament mb-2">答复</div>
+                <div className="font-body text-parchment leading-relaxed whitespace-pre-wrap text-[0.98rem]">
+                  {advice.advice}
+                </div>
               </div>
             )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

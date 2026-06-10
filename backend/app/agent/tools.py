@@ -326,14 +326,14 @@ _REGISTRY: list[ToolDef] = [
         "upsert_world_doc",
         "整体覆盖世界观 markdown",
         _schema({"content_md": {"type": "string"}}, ["content_md"]),
-        {Phase.WORLD},
+        {Phase.FOUNDATION},
         _impl_upsert_world_doc,
     ),
     ToolDef(
         "read_world_doc",
         "读取世界观",
         _schema({}, []),
-        {Phase.WORLD, Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING},
+        {Phase.FOUNDATION, Phase.WRITING, Phase.DONE},
         _impl_read_world_doc,
     ),
     ToolDef(
@@ -347,7 +347,7 @@ _REGISTRY: list[ToolDef] = [
             },
             ["name"],
         ),
-        {Phase.CHARACTERS},
+        {Phase.FOUNDATION},
         _impl_create_character,
     ),
     ToolDef(
@@ -362,14 +362,14 @@ _REGISTRY: list[ToolDef] = [
             },
             ["id"],
         ),
-        {Phase.CHARACTERS},
+        {Phase.FOUNDATION},
         _impl_update_character,
     ),
     ToolDef(
         "list_characters",
         "列人物",
         _schema({}, []),
-        {Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING},
+        {Phase.FOUNDATION, Phase.WRITING, Phase.DONE},
         _impl_list_characters,
     ),
     ToolDef(
@@ -384,7 +384,7 @@ _REGISTRY: list[ToolDef] = [
             },
             ["title"],
         ),
-        {Phase.OUTLINE},
+        {Phase.WRITING},
         _impl_create_outline_node,
     ),
     ToolDef(
@@ -401,14 +401,14 @@ _REGISTRY: list[ToolDef] = [
             },
             ["id"],
         ),
-        {Phase.OUTLINE, Phase.WRITING},
+        {Phase.WRITING},
         _impl_update_outline_node,
     ),
     ToolDef(
         "list_outline",
         "列大纲",
         _schema({}, []),
-        {Phase.OUTLINE, Phase.WRITING},
+        {Phase.WRITING, Phase.DONE},
         _impl_list_outline,
     ),
     ToolDef(
@@ -468,14 +468,14 @@ _REGISTRY: list[ToolDef] = [
         "advance_phase",
         "切换阶段",
         _schema({"to": {"type": "string"}}, ["to"]),
-        {Phase.WORLD, Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING, Phase.DONE},
+        {Phase.FOUNDATION, Phase.WRITING, Phase.DONE},
         _impl_advance_phase,
     ),
     ToolDef(
         "read_project_summary",
         "读项目摘要",
         _schema({}, []),
-        {Phase.WORLD, Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING, Phase.DONE},
+        {Phase.FOUNDATION, Phase.WRITING, Phase.DONE},
         _impl_read_project_summary,
     ),
     ToolDef(
@@ -485,7 +485,7 @@ _REGISTRY: list[ToolDef] = [
             {"question": {"type": "string", "description": "你想问的具体问题"}},
             ["question"],
         ),
-        {Phase.OUTLINE, Phase.WRITING, Phase.DONE},
+        {Phase.WRITING, Phase.DONE},
         _impl_consult_outline_expert,
     ),
     ToolDef(
@@ -511,7 +511,7 @@ _REGISTRY: list[ToolDef] = [
             },
             ["target"],
         ),
-        {Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING, Phase.DONE},
+        {Phase.FOUNDATION, Phase.WRITING, Phase.DONE},
         _impl_consult_reviewer,
     ),
 ]

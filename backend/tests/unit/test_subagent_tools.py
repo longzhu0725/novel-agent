@@ -33,16 +33,19 @@ def _ctx(sq, fr, phase, llm=None):
 
 
 def test_three_consult_tools_registered():
-    for phase in (Phase.OUTLINE, Phase.WRITING, Phase.CHARACTERS, Phase.DONE):
+    for phase in (Phase.WRITING, Phase.DONE):
         names = {t.name for t in get_tools_for_phase(phase)}
-        if phase in (Phase.WRITING, Phase.DONE):
-            assert "consult_style_expert" in names
-        else:
-            assert "consult_style_expert" not in names
-        if phase in (Phase.OUTLINE, Phase.WRITING, Phase.DONE):
-            assert "consult_outline_expert" in names
-        if phase in (Phase.CHARACTERS, Phase.OUTLINE, Phase.WRITING, Phase.DONE):
-            assert "consult_reviewer" in names
+        # style 仅在 WRITING/DONE 注册（不需在 FOUNDATION）
+        assert "consult_style_expert" in names
+        # outline 在 WRITING/DONE
+        assert "consult_outline_expert" in names
+        # reviewer 在 FOUNDATION/WRITING/DONE
+        assert "consult_reviewer" in names
+    # INIT 不应注册
+    init_names = {t.name for t in get_tools_for_phase(Phase.INIT)}
+    assert "consult_style_expert" not in init_names
+    assert "consult_outline_expert" not in init_names
+    assert "consult_reviewer" not in init_names
 
 
 def test_consult_tools_rejected_in_init_phase():
@@ -51,8 +54,11 @@ def test_consult_tools_rejected_in_init_phase():
     names = ["consult_outline_expert", "consult_style_expert", "consult_reviewer"]
     for n in names:
         tool = LLMTool(name=n, description="", parameters={})
-        # 用最小参数调用，期望被阶段守卫拒绝
-        result = execute_tool(tool, ToolContext("p1", None, None, Phase.INIT, llm=None), {"question":"x", "text":"x", "target":"x"})  # type: ignore[arg-type]
+        result = execute_tool(
+            tool,
+            ToolContext("p1", None, None, Phase.INIT, llm=None),  # type: ignore[arg-type]
+            {"question": "x", "text": "x", "target": "x"},
+        )
         assert not result.ok and "不可用" in (result.error or "")
 
 

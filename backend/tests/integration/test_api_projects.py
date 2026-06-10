@@ -48,12 +48,18 @@ def test_get_and_patch_project(client):
 
 def test_advance_phase_legal(client):
     pid = client.post("/api/projects", json={"name": "A"}).json()["id"]
-    r = client.post(f"/api/projects/{pid}/phase", json={"to": "WORLD"})
-    assert r.status_code == 200 and r.json()["current_phase"] == "WORLD"
+    # 新设计: INIT → FOUNDATION → WRITING → DONE
+    r = client.post(f"/api/projects/{pid}/phase", json={"to": "FOUNDATION"})
+    assert r.status_code == 200 and r.json()["current_phase"] == "FOUNDATION"
+    r = client.post(f"/api/projects/{pid}/phase", json={"to": "WRITING"})
+    assert r.status_code == 200 and r.json()["current_phase"] == "WRITING"
+    r = client.post(f"/api/projects/{pid}/phase", json={"to": "DONE"})
+    assert r.status_code == 200 and r.json()["current_phase"] == "DONE"
 
 
 def test_advance_phase_illegal(client):
     pid = client.post("/api/projects", json={"name": "A"}).json()["id"]
+    # INIT → WRITING 跳级，应该 400
     r = client.post(f"/api/projects/{pid}/phase", json={"to": "WRITING"})
     assert r.status_code == 400
 

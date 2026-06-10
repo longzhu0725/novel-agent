@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Novel Agent · 完整流程解析</title>
+<style>
+  :root {
+    --ink: #0E0D0B;
+    --ink-soft: #1A1612;
+    --parchment: #E8DFC8;
+    --parchment-dim: #B8AE93;
+    --parchment-faint: #6B6356;
+    --gold: #C9A861;
+    --gold-bright: #E5C679;
+    --gold-dim: #8A7340;
+    --candle: #D4A04C;
+    --leather: #3D2F1F;
+    --leather-light: #5A4630;
+    --crimson: #8B2E2E;
+    --emerald: #4A6B3A;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; background: var(--ink); color: var(--parchment); }
+  body {
+    font-family: "EB Garamond", "Songti SC", "Source Han Serif SC", serif;
+    line-height: 1.7;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,160,76,0.06), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 50% 100%, rgba(201,168,97,0.04), transparent 70%),
+      radial-gradient(circle at 50% 50%, var(--ink-soft) 0%, var(--ink) 100%);
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.85 0 0 0 0 0.7 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 56px 28px 96px; position: relative; z-index: 1; }
+  h1, h2, h3, h4 { font-family: "Cormorant Garamond", "Songti SC", serif; font-weight: 500; color: var(--parchment); letter-spacing: 0.01em; }
+  h1 { font-size: 2.6rem; font-style: italic; text-align: center; margin: 0 0 8px; }
+  h1 .g { color: var(--gold-bright); }
+  h2 { font-size: 1.7rem; margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--leather-light); }
+  h2::before { content: "❧ "; color: var(--gold); }
+  h3 { font-size: 1.25rem; color: var(--gold); margin: 28px 0 8px; font-style: italic; }
+  h4 { font-size: 1.05rem; color: var(--parchment-dim); margin: 20px 0 6px; }
+  p { margin: 8px 0 14px; }
+  .lede { font-style: italic; text-align: center; color: var(--parchment-dim); max-width: 640px; margin: 0 auto 36px; }
+  .toc { padding: 20px 24px; border: 1px solid var(--leather-light); border-radius: 4px; background: rgba(26,22,18,0.5); margin-bottom: 40px; }
+  .toc h2 { margin-top: 0; border: none; font-size: 1.2rem; }
+  .toc ol { columns: 2; column-gap: 32px; margin: 8px 0 0; padding-left: 20px; }
+  .toc a { color: var(--parchment-dim); text-decoration: none; }
+  .toc a:hover { color: var(--gold-bright); }
+  pre, code { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  code { background: rgba(58,47,31,0.4); color: var(--gold-bright); padding: 1px 6px; border-radius: 3px; font-size: 0.92em; }
+  pre {
+    background: rgba(14,13,11,0.85);
+    border: 1px solid var(--leather);
+    border-left: 3px solid var(--gold-dim);
+    padding: 14px 16px;
+    border-radius: 3px;
+    overflow-x: auto;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    color: var(--parchment-dim);
+  }
+  pre code { background: transparent; padding: 0; color: var(--parchment-dim); }
+  .arch {
+    background: rgba(14,13,11,0.75);
+    border: 1px solid var(--leather);
+    padding: 16px 20px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--parchment-dim);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .arch .hl { color: var(--gold-bright); }
+  .arch .em { color: var(--candle); font-style: normal; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--leather); vertical-align: top; }
+  th { color: var(--gold); font-family: "Cinzel", "Cormorant Garamond", serif; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  tbody tr:hover { background: rgba(58,47,31,0.18); }
+  td code { font-size: 0.85em; }
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+  .step { padding: 14px 12px; border: 1px solid var(--leather-light); border-radius: 4px; background: rgba(26,22,18,0.5); }
+  .step .n { font-family: "Cinzel", serif; color: var(--gold); font-size: 0.7rem; letter-spacing: 0.18em; }
+  .step .t { font-family: "Cormorant Garamond", serif; font-size: 1.1rem; color: var(--parchment); font-style: italic; margin: 4px 0 6px; }
+  .step .d { font-size: 0.88rem; color: var(--parchment-faint); line-height: 1.5; }
+  .step.cur { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim) inset; }
+  @media (max-width: 720px) { .flow { grid-template-columns: repeat(2, 1fr); } .toc ol { columns: 1; } h1 { font-size: 2rem; } }
+  blockquote { border-left: 3px solid var(--gold-dim); padding: 4px 16px; color: var(--parchment-dim); font-style: italic; margin: 14px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  .legend { display: inline-block; padding: 1px 8px; border: 1px solid var(--leather-light); border-radius: 999px; font-size: 0.75rem; color: var(--parchment-faint); margin-right: 6px; font-family: "Cinzel", serif; letter-spacing: 0.1em; }
+  .legend.ok { color: var(--emerald); border-color: var(--emerald); }
+  .legend.warn { color: var(--candle); border-color: var(--candle); }
+  hr { border: none; border-top: 1px solid var(--leather); margin: 36px 0; }
+  a { color: var(--gold-bright); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Novel Agent <span class="g">·</span> 完整流程解析</h1>
+  <p class="lede">写一本小说的全链路：用户输入 → 浏览器 → Vite → FastAPI → Agent → LLM → 流式回流 → 落盘</p>
+
+  <nav class="toc">
+    <h2>目录</h2>
+    <ol>
+      <li><a href="#arch">系统整体架构</a></li>
+      <li><a href="#state">阶段状态机</a></li>
+      <li><a href="#flow">八步创作流程</a></li>
+      <li><a href="#data">数据模型与存储</a></li>
+      <li><a href="#protocol">协议（REST + WS）</a></li>
+      <li><a href="#tools">工具集与流式章节</a></li>
+      <li><a href="#advisor">顾问 sub-agent</a></li>
+      <li><a href="#status">当前已跑通的链路</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="arch">1 · 系统整体架构</h2>
+
+  <div class="arch">
+<span class="hl">┌─ 浏览器 (React + Vite + TS + Tailwind + zustand) ─────────────┐</span>
+│  ├─ ProjectList     书架（项目列表/CRUD）                       │
+│  └─ Workspace       工作室（按阶段路由面板）                    │
+│       ├─ PhaseNav          顶部书签（章回）                     │
+│       ├─ FoundationPanel   基础设定（世界 + 人物）             │
+│       ├─ WritingPanel      撰文（大纲 + 章节树）                │
+│       ├─ ChapterList       章回（写作主区）                     │
+│       ├─ AdvisorPanel      三顾问（随时可请益）                 │
+│       └─ ChatPanel         与笔对坐（WS 双向流）                │
+<span class="hl">└──┬────────────────────────────────────────────────┬───────────┘</span>
+   │ REST  <span class="em">/api/*</span>                                  │ WebSocket <span class="em">/ws/chat</span>
+   ▼                                                        ▼
+<span class="hl">┌─ FastAPI (uvicorn :8000) ─────────────────────────────────────┐</span>
+│  ├─ <span class="hl">/api/</span>projects|world|characters|outline|chapters|  │
+│  │   chat/history|advisors/{name}    ← REST（CRUD）              │
+│  └─ <span class="hl">/ws/chat</span>                            ← WS（流式 + 事件）│
+│                                                                  │
+│  api/    参数解析                                                │
+│    └─→  storage/  元信息→SQLite，正文→*.md 文件                  │
+│              ▲                                                   │
+│  agent/      │（不直接读写）                                      │
+│  ├─ agent.py      Agent 主循环（流式 delta 实时落盘）            │
+│  ├─ tools.py      工具注册表 + 阶段门控                          │
+│  ├─ prompts.py    各阶段 system prompt 模板                     │
+│  ├─ subagents.py  3 个顾问 sub-agent                            │
+│  └─ sessions.py   WS 会话注册 + 跨窗口事件总线                   │
+│       │                                                           │
+│       ▼                                                           │
+│  <span class="hl">core/</span>                                                           │
+│  ├─ llm.py            LLMClient（httpx 裸调，OpenAI 兼容）       │
+│  ├─ state_machine.py  5 阶段 + 转移规则                         │
+│  ├─ compression.py    80% 触发，保留 70% tail                    │
+│  └─ errors.py         ProtocolError + ErrorCode                  │
+<span class="hl">└──────────────────────────────────────────────────────────────┘</span>
+       │                                          │
+       └─→ 火山方舟 / OpenAI / DeepSeek / vLLM ───┘
+  </div>
+
+  <h3>分层不变量</h3>
+  <ul>
+    <li><code>api/</code> 只做参数解析，<b>不写业务</b></li>
+    <li><code>agent/</code> 调 LLM / 调工具，<b>不直接读写 DB / 文件</b></li>
+    <li><code>storage/</code> 是唯一能摸磁盘的地方</li>
+    <li>任何全局状态从 <code>core/</code> 取；错误用 <code>core/errors.py</code> 的协议错误</li>
+  </ul>
+
+  <h2 id="state">2 · 阶段状态机（流程的骨架）</h2>
+  <p>定义在 <code>backend/app/core/state_machine.py</code>：</p>
+  <div class="arch">
+INIT ──► FOUNDATION ──► WRITING ──► DONE
+  │          │              │
+  └──────────┴──────────────┘
+        （任意阶段可回退修订）
+  </div>
+
+  <h3>转移规则</h3>
+  <ul>
+    <li><b>向前一格</b>：<code>INIT → FOUNDATION → WRITING → DONE</code>，合法</li>
+    <li><b>向后任意格</b>：合法（用户改主意，回到前一卷再写）</li>
+    <li><b>自转移</b>（<code>WRITING → WRITING</code>）：非法</li>
+    <li><b>跳级</b>（<code>INIT → WRITING</code>）：非法</li>
+    <li>旧版本 5 阶段 <code>WORLD/CHARACTERS/OUTLINE/WRITING/DONE</code> 的项目在 <code>init_schema()</code> 时<b>自动迁移</b>到新版本（<code>WORLD/CHARACTERS → FOUNDATION</code>，<code>OUTLINE → WRITING</code>），迁移函数 <code>migrate_legacy_phase()</code></li>
+  </ul>
+
+  <h2 id="flow">3 · 八步创作流程</h2>
+
+  <div class="flow">
+    <div class="step">
+      <div class="n">STEP 01</div>
+      <div class="t">起念</div>
+      <div class="d">ProjectList 输入书名 → POST /projects → SQLite 落库 → 跳转 Workspace</div>
+    </div>
+    <div class="step">
+      <div class="n">STEP 02</div>
+      <div class="t">阶段引导</div>
+      <div class="d">INIT 阶段：提示页 + 右侧 ChatPanel，与笔谈构想</div>
+    </div>
+    <div class="step cur">
+      <div class="n">STEP 03</div>
+      <div class="t">Foundation</div>
+      <div class="d">基础设定：WorldEditor（世界 markdown） + CharacterList（人物卡 CRUD）</div>
+    </div>
+    <div class="step">
+      <div class="n">STEP 04</div>
+      <div class="t">与笔对坐</div>
+      <div class="d">WS 流式：delta 增量推送，LLM 调工具，10 轮上限，可中断</div>
+    </div>
+    <div class="step">
+      <div class="n">STEP 05</div>
+      <div class="t">Writing</div>
+      <div class="d">撰文：OutlineTree 选节点 → ChapterList 写章节，流式落盘</div>
+    </div>
+    <div class="step">
+      <div class="n">STEP 06</div>
+      <div class="t">顾问</div>
+      <div class="d">AdvisorPanel 三个按钮：outline / style / review，独立 sub-agent</div>
+    </div>
+    <div class="step">
+      <div class="n">STEP 07</div>
+      <div class="t">回退</div>
+      <div class="d">PhaseNav 弹 portal modal 确认回退，状态机允许向后任意格</div>
+    </div>
+    <div class="step">
+      <div class="n">STEP 08</div>
+      <div class="t">完稿</div>
+      <div class="d">WRITING → DONE，ChapterList 升主区，完整阅读模式</div>
+    </div>
+  </div>
+
+  <h3>步骤 4 详解：ChatPanel 与 WebSocket 协作</h3>
+  <ol>
+    <li><b>连接</b>：<code>new ChatSocket(sid, pid)</code> → 走 Vite 代理 → 后端 <code>ws.py</code></li>
+    <li><b>拉历史</b>：<code>GET /chat/history?session_id=...</code> → 渲染</li>
+    <li><b>发消息</b>：按 Enter → <code>send(text)</code> → WS 发 <code>{type:"chat.message", text, correlation_id}</code></li>
+    <li><b>后端处理</b>（<code>api/ws.py</code> + <code>agent/agent.py</code>）：
+      <ul>
+        <li>拉项目 + 阶段 + 上下文摘要</li>
+        <li><b>上下文压缩</b>：历史消息总长 &gt; 80% 窗口时触发，丢最早 30% → 500 字 summary → 保留 70% tail</li>
+        <li>拼 system prompt（<code>prompts.py</code> <code>build_system_prompt</code>）</li>
+        <li>喂给 LLM（<code>core/llm.py</code>，httpx 裸调，可注入 mock）</li>
+        <li><b>流式接收</b>：每个 <code>chat.delta</code> 一边推回前端、一边若处于"流式章节"模式则 <code>_append_delta</code> 落盘</li>
+      </ul>
+    </li>
+    <li><b>工具调用</b>：LLM 返回 <code>tool_calls</code> → Agent 派发到 <code>tools.py</code>，按 <code>allowed_phases</code> 校验 → 执行后写回 <code>chat.tool_result</code> → 再喂 LLM（循环最多 10 轮）</li>
+    <li><b>结束</b>：<code>chat.done { message_id, usage }</code></li>
+  </ol>
+  <p>前端 <code>ChatPanel.tsx</code> 收到 <code>delta</code> 就把它 <code>set((s)=&gt;({streaming: s.streaming + ev.text}))</code>，收到 <code>done</code> 把 <code>streaming</code> 整段推到 <code>messages</code> 数组。</p>
+
+  <h2 id="data">4 · 数据模型与存储</h2>
+  <table>
+    <thead>
+      <tr><th>数据</th><th>落点</th><th>理由</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>content_md</code>（章节 / 设定 / 人物）</td><td>磁盘 <code>*.md</code> / <code>*.json</code></td><td>人类可读、可 diff、可备份</td></tr>
+      <tr><td>元信息（id / order / parent / word_count / 状态）</td><td>SQLite</td><td>关系查询、列表、排序、统计</td></tr>
+      <tr><td>聊天原文</td><td>SQLite <code>chat_messages</code></td><td>持久化，支持历史回溯</td></tr>
+      <tr><td>滚动摘要</td><td>SQLite <code>project_context</code></td><td>项目级、跨会话</td></tr>
+    </tbody>
+  </table>
+
+  <h3>每项目目录布局</h3>
+  <p><code>backend/data/projects/&lt;pid&gt;/</code></p>
+<pre><code>world.md
+characters/&lt;cid&gt;.json
+outline.json                # 整树快照
+chapters/0001_&lt;title&gt;.md
+chapters/0002_&lt;title&gt;.md
+...</code></pre>
+
+  <h2 id="protocol">5 · 协议</h2>
+
+  <h3>REST（前缀 <code>/api</code>）</h3>
+  <table>
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>GET / POST / DELETE</td><td><code>/projects</code></td><td>项目列表 / 创建 / 删除</td></tr>
+      <tr><td>GET / PATCH</td><td><code>/projects/{pid}</code></td><td>改元信息</td></tr>
+      <tr><td>POST</td><td><code>/projects/{pid}/phase</code></td><td>切阶段</td></tr>
+      <tr><td>GET / PUT</td><td><code>/projects/{pid}/world</code></td><td>世界观 markdown</td></tr>
+      <tr><td>GET / POST / PATCH / DELETE</td><td><code>/projects/{pid}/characters[/{cid}]</code></td><td>人物卡</td></tr>
+      <tr><td>GET / POST / PATCH / DELETE</td><td><code>/projects/{pid}/outline[/{id}]</code></td><td>大纲节点</td></tr>
+      <tr><td>GET / POST / PATCH / DELETE</td><td><code>/projects/{pid}/chapters[/{chid}]</code></td><td>章节</td></tr>
+      <tr><td>GET</td><td><code>/projects/{pid}/chat/history</code></td><td>拉历史</td></tr>
+      <tr><td>POST</td><td><code>/projects/{pid}/advisors/{name}</code></td><td>顾问 sub-agent</td></tr>
+    </tbody>
+  </table>
+
+  <h3>WebSocket：<code>/ws/chat?session_id=&amp;project_id=</code></h3>
+  <p>信封：<code>{type, correlation_id, payload}</code></p>
+  <table>
+    <thead><tr><th>方向</th><th>type</th><th>payload</th></tr></thead>
+    <tbody>
+      <tr><td>→ C</td><td><code>chat.message</code></td><td><code>{ text }</code></td></tr>
+      <tr><td>→ C</td><td><code>chat.stop</code></td><td><code>{}</code>（中断当前生成）</td></tr>
+      <tr><td>→ C</td><td><code>tool.approve</code></td><td><code>{ tool_call_id, approved }</code></td></tr>
+      <tr><td>→ C</td><td><code>ping</code></td><td><code>{}</code></td></tr>
+      <tr><td>C →</td><td><code>chat.delta</code></td><td><code>{ text }</code>（增量 token）</td></tr>
+      <tr><td>C →</td><td><code>chat.tool_call</code></td><td><code>{ id, name, args }</code></td></tr>
+      <tr><td>C →</td><td><code>chat.tool_result</code></td><td><code>{ id, ok, result \| error }</code></td></tr>
+      <tr><td>C →</td><td><code>chat.done</code></td><td><code>{ message_id, usage }</code></td></tr>
+      <tr><td>C →</td><td><code>agent.suggest</code></td><td><code>{ text, actions? }</code></td></tr>
+      <tr><td>C →</td><td><code>project.changed</code></td><td><code>{ kind, id }</code>（跨窗口广播）</td></tr>
+      <tr><td>C →</td><td><code>error</code></td><td><code>{ code, message, recoverable }</code></td></tr>
+      <tr><td>C →</td><td><code>pong</code></td><td><code>{}</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="tools">6 · 工具集与流式章节</h2>
+  <p>工具在 <code>backend/app/agent/tools.py</code> 注册，由 <code>allowed_phases</code> 门控（合并后阶段名）：</p>
+  <table>
+    <thead><tr><th>阶段</th><th>工具</th></tr></thead>
+    <tbody>
+      <tr><td>FOUNDATION</td><td><code>upsert_world_doc</code> / <code>read_world_doc</code> / <code>create_character</code> / <code>update_character</code> / <code>list_characters</code></td></tr>
+      <tr><td>WRITING</td><td><code>create_outline_node</code> / <code>update_outline_node</code> / <code>list_outline</code> / <code>create_chapter</code> / <b><code>begin_chapter</code></b> / <b><code>append_to_chapter</code></b> / <b><code>finalize_chapter</code></b> / <code>read_chapter</code></td></tr>
+      <tr><td>任意</td><td><code>advance_phase</code> / <code>read_project_summary</code> / <code>consult_outline_expert</code> / <code>consult_style_expert</code> / <code>consult_reviewer</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>流式章节三件套（合并后保留的"超 v0"能力）</h3>
+  <ol>
+    <li>LLM 调 <code>begin_chapter({title, order, outline_node_id?})</code> → 后端建章节，状态 <code>DRAFT_PARTIAL</code>，Agent 记下 <code>streaming_chapter_id</code></li>
+    <li>后续 LLM 的每个 <code>chat.delta</code> → Agent 主循环发现处于"流式章节" → <code>_append_delta</code> 同步写 <b>SQLite + 落 <code>0001_*.md</code></b></li>
+    <li>LLM 调 <code>finalize_chapter({chapter_id})</code> → 状态 <code>DRAFT</code>，跳出 Agent loop</li>
+  </ol>
+
+  <h2 id="advisor">7 · 顾问 sub-agent</h2>
+  <p>3 个 sub-agent 调同一个 LLM，但用不同系统提示侧重不同维度：</p>
+  <table>
+    <thead><tr><th>Advisor</th><th>用途</th><th>入口</th></tr></thead>
+    <tbody>
+      <tr><td><code>outline_expert</code></td><td>结构 / 伏笔 / 节奏</td><td>REST + 函数</td></tr>
+      <tr><td><code>style_expert</code></td><td>文风一致性（参数带原文 + focus）</td><td>REST + 函数</td></tr>
+      <tr><td><code>reviewer</code></td><td>一致性 / 人设 / 设定自洽</td><td>REST + 函数</td></tr>
+    </tbody>
+  </table>
+  <p>实现：<code>agent/subagents.py</code>，3 套 system prompt + 独立会话。</p>
+
+  <h2 id="status">8 · 当前已跑通的链路</h2>
+  <ul>
+    <li><span class="legend ok">RUNNING</span> 后端 <code>uvicorn app.main:app</code> 监听 <code>0.0.0.0:8000</code>，lifespan 启动时 <code>init_schema</code></li>
+    <li><span class="legend ok">RUNNING</span> 前端 <code>vite --host 0.0.0.0</code> 监听 <code>5173</code>，<code>/api</code> / <code>/ws</code> 代理到 <code>8000</code></li>
+    <li><span class="legend ok">CONFIGURED</span> <code>.env</code> 已配置火山方舟端点 + 测试 key</li>
+    <li><span class="legend ok">OK</span> ProjectList 增删查 → SQLite；Workspace 三 tab</li>
+    <li><span class="legend ok">OK</span> AdvisorPanel 三个按钮 → REST → 3 sub-agent → 实时回显</li>
+    <li><span class="legend ok">OK</span> ChatPanel 走 WS 流式，<code>chat.delta</code> 增量渲染</li>
+    <li><span class="legend ok">OK</span> PhaseNav 点击 → 状态机校验 → 切阶段</li>
+  </ul>
+
+  <h3>常见排错</h3>
+  <ul>
+    <li><span class="legend warn">注意</span> 没填 <code>.env</code> → 顾问 / 章节 / 对话都走不通，但项目 CRUD 没事</li>
+    <li><span class="legend warn">注意</span> 端口被占 → 改 <code>--port</code> 和 Vite 的 proxy</li>
+    <li><span class="legend warn">注意</span> 浏览器 CORS：避免直连 8000，<b>始终用 5173</b>，让 Vite 代理</li>
+  </ul>
+
+  <hr />
+  <p style="text-align:center;color:var(--parchment-faint);font-family:'Cinzel',serif;letter-spacing:0.18em;font-size:0.75rem;">SCRIBE · QUILL · CANDLE</p>
+
+</div>
+</body>
+</html>
