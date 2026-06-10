@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type Chapter } from "../../api/client";
 import { useProjectStore } from "../../stores/projectStore";
+import Modal from "../../components/Modal";
 
 const STATUS_LABELS: Record<string, { cn: string; color: string }> = {
   DRAFT: { cn: "草稿", color: "text-parchment-dim border-parchment-faint" },
@@ -10,19 +11,21 @@ const STATUS_LABELS: Record<string, { cn: string; color: string }> = {
 };
 
 function ConfirmDelete({
+  open,
   title,
   busy,
   onCancel,
   onConfirm,
 }: {
+  open: boolean;
   title: string;
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal-panel p-6" onClick={(e) => e.stopPropagation()}>
+    <Modal open={open} onClose={onCancel} ariaLabel="确认删除章节">
+      <div className="p-6">
         <div className="label-ornament text-xs text-crimson mb-2">焚稿</div>
         <h3 className="font-display italic text-2xl text-parchment mb-3">
           确认删除此章？
@@ -46,18 +49,20 @@ function ConfirmDelete({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 function NewChapterModal({
   pid,
+  open,
   defaultOrder,
   defaultOutlineNodeId,
   onClose,
   onCreated,
 }: {
   pid: string;
+  open: boolean;
   defaultOrder: number;
   defaultOutlineNodeId?: string | null;
   onClose: () => void;
@@ -95,11 +100,8 @@ function NewChapterModal({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-panel p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open={open} onClose={onClose} ariaLabel="新章">
+      <div className="p-6">
         <div className="flex items-start justify-between mb-1">
           <div>
             <div className="label-ornament text-xs">新章</div>
@@ -169,16 +171,18 @@ function NewChapterModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 function EditChapterMetaModal({
   chapter,
+  open,
   onClose,
   onSaved,
 }: {
   chapter: Chapter;
+  open: boolean;
   onClose: () => void;
   onSaved: (c: Chapter) => void;
 }) {
@@ -214,11 +218,8 @@ function EditChapterMetaModal({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-panel p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open={open} onClose={onClose} ariaLabel="修订章节">
+      <div className="p-6">
         <div className="flex items-start justify-between mb-1">
           <div>
             <div className="label-ornament text-xs">校阅</div>
@@ -291,7 +292,7 @@ function EditChapterMetaModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -548,6 +549,7 @@ export default function ChapterList({
 
       {deleting && (
         <ConfirmDelete
+          open
           title={deleting.title}
           busy={busy}
           onCancel={() => setDeleting(null)}
@@ -557,6 +559,7 @@ export default function ChapterList({
       {editingMeta && (
         <EditChapterMetaModal
           chapter={editingMeta}
+          open
           onClose={() => setEditingMeta(null)}
           onSaved={onMetaSaved}
         />
@@ -564,6 +567,7 @@ export default function ChapterList({
       {creating && (
         <NewChapterModal
           pid={pid}
+          open
           defaultOrder={defaultOrder}
           defaultOutlineNodeId={outlineNodeId}
           onClose={() => setCreating(false)}

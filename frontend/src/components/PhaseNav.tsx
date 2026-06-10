@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import type { Project } from "../api/client";
+import Modal from "./Modal";
 
 const PHASES = [
   { key: "INIT", cn: "起", label: "构想" },
@@ -76,52 +76,48 @@ export default function PhaseNav({
         </div>
       </div>
 
-      {confirmBack &&
-        createPortal(
-          <div
-            className="modal-backdrop"
-            onClick={() => setConfirmBack(null)}
-          >
-            <div
-              className="modal-panel p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="label-ornament text-xs text-candle mb-2">回卷</div>
-              <h3 className="font-display italic text-2xl text-parchment mb-3">
-                确认回退至「{targetLabel}」？
-              </h3>
-              <p className="font-body text-parchment-dim mb-1">
-                当前阶段「{currentLabel}」的工作已经就绪。
-              </p>
-              <p className="font-body italic text-parchment-faint text-sm mb-5">
-                回退后再次前进需要重新经过每一卷。已写章节不会被删除，但需要重新进入才能继续。
-              </p>
-              <div className="divider-gold" />
-              <div className="flex gap-2 justify-end mt-4">
-                <button
-                  onClick={() => setConfirmBack(null)}
-                  className="btn btn-ghost"
-                >
-                  不动
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirmBack) onAdvance(confirmBack);
-                    setConfirmBack(null);
-                  }}
-                  className="btn"
-                  style={{
-                    borderColor: "var(--candle)",
-                    color: "var(--candle)",
-                  }}
-                >
-                  确认回退
-                </button>
-              </div>
+      {confirmBack && (
+        <Modal
+          open
+          onClose={() => setConfirmBack(null)}
+          ariaLabel="确认回退阶段"
+        >
+          <div className="p-6">
+            <div className="label-ornament text-xs text-candle mb-2">回卷</div>
+            <h3 className="font-display italic text-2xl text-parchment mb-3">
+              确认回退至「{targetLabel}」？
+            </h3>
+            <p className="font-body text-parchment-dim mb-1">
+              当前阶段「{currentLabel}」的工作已经就绪。
+            </p>
+            <p className="font-body italic text-parchment-faint text-sm mb-5">
+              回退后再次前进需要重新经过每一卷。已写章节不会被删除，但需要重新进入才能继续。
+            </p>
+            <div className="divider-gold" />
+            <div className="flex gap-2 justify-end mt-4">
+              <button
+                onClick={() => setConfirmBack(null)}
+                className="btn btn-ghost"
+              >
+                不动
+              </button>
+              <button
+                onClick={() => {
+                  if (confirmBack) onAdvance(confirmBack);
+                  setConfirmBack(null);
+                }}
+                className="btn"
+                style={{
+                  borderColor: "var(--candle)",
+                  color: "var(--candle)",
+                }}
+              >
+                确认回退
+              </button>
             </div>
-          </div>,
-          document.body,
-        )}
+          </div>
+        </Modal>
+      )}
     </nav>
   );
 }

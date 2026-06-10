@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type Character } from "../../api/client";
 import { useProjectStore } from "../../stores/projectStore";
+import Modal from "../../components/Modal";
 
 const ROLE_LABELS: Record<string, string> = {
   protagonist: "主角",
@@ -22,19 +23,21 @@ function formatDate(s: string): string {
 }
 
 function ConfirmDelete({
+  open,
   name,
   busy,
   onCancel,
   onConfirm,
 }: {
+  open: boolean;
   name: string;
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal-panel p-6" onClick={(e) => e.stopPropagation()}>
+    <Modal open={open} onClose={onCancel} ariaLabel="确认删除人物">
+      <div className="p-6">
         <div className="label-ornament text-xs text-crimson mb-2">除名</div>
         <h3 className="font-display italic text-2xl text-parchment mb-3">
           确认删除此人物？
@@ -58,16 +61,18 @@ function ConfirmDelete({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 function EditCharacterModal({
   character,
+  open,
   onClose,
   onSaved,
 }: {
   character: Character;
+  open: boolean;
   onClose: () => void;
   onSaved: (c: Character) => void;
 }) {
@@ -99,11 +104,8 @@ function EditCharacterModal({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-panel p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open={open} onClose={onClose} ariaLabel="修订人物">
+      <div className="p-6">
         <div className="flex items-start justify-between mb-1">
           <div>
             <div className="label-ornament text-xs">校阅</div>
@@ -181,7 +183,7 @@ function EditCharacterModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -313,6 +315,7 @@ export default function CharacterList({
 
         {deleting && (
           <ConfirmDelete
+            open
             name={deleting.name}
             busy={busy}
             onCancel={() => setDeleting(null)}
@@ -322,6 +325,7 @@ export default function CharacterList({
         {editing && (
           <EditCharacterModal
             character={editing}
+            open
             onClose={() => setEditing(null)}
             onSaved={(c) => {
               void refreshCharacters();
@@ -424,6 +428,7 @@ export default function CharacterList({
 
       {deleting && (
         <ConfirmDelete
+          open
           name={deleting.name}
           busy={busy}
           onCancel={() => setDeleting(null)}
@@ -433,6 +438,7 @@ export default function CharacterList({
       {editing && (
         <EditCharacterModal
           character={editing}
+          open
           onClose={() => setEditing(null)}
           onSaved={(c) => {
             void refreshCharacters();

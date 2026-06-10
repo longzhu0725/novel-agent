@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../../api/client";
+import Modal from "../../components/Modal";
 
 type Advisor = "outline" | "style" | "reviewer";
 
@@ -112,14 +113,12 @@ export default function AdvisorPanel({ pid }: { pid: string }) {
 
       {/* 模态 */}
       {open && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setOpen(null)}
+        <Modal
+          open
+          onClose={() => setOpen(null)}
+          ariaLabel={ADVISOR_META[open].label}
         >
-          <div
-            className="modal-panel p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="p-6">
             {/* 模态头 */}
             <div className="flex items-start justify-between mb-1">
               <div>
@@ -212,7 +211,7 @@ export default function AdvisorPanel({ pid }: { pid: string }) {
               </div>
             )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

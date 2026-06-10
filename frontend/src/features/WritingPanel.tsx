@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type Chapter, type OutlineNode } from "../api/client";
 import { useProjectStore } from "../stores/projectStore";
+import Modal from "../components/Modal";
 import ChapterList from "./chapters/ChapterList";
 
 interface Node extends OutlineNode {
@@ -100,11 +101,13 @@ function TreeNode({
 function CreateOutlineNodeModal({
   pid,
   parentId,
+  open,
   onClose,
   onCreated,
 }: {
   pid: string;
   parentId: string | null;
+  open: boolean;
   onClose: () => void;
   onCreated: (n: OutlineNode) => void;
 }) {
@@ -140,11 +143,8 @@ function CreateOutlineNodeModal({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-panel p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open={open} onClose={onClose} ariaLabel="新增纲目">
+      <div className="p-6">
         <div className="flex items-start justify-between mb-1">
           <div>
             <div className="label-ornament text-xs">添节</div>
@@ -218,7 +218,7 @@ function CreateOutlineNodeModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -375,6 +375,7 @@ export default function WritingPanel({ pid }: { pid: string }) {
         <CreateOutlineNodeModal
           pid={pid}
           parentId={null}
+          open
           onClose={() => setCreatingNode(false)}
           onCreated={(n) => setSelectedId(n.id)}
         />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type OutlineNode } from "../../api/client";
 import { useProjectStore } from "../../stores/projectStore";
+import Modal from "../../components/Modal";
 
 interface Node extends OutlineNode {
   children: Node[];
@@ -80,19 +81,21 @@ function Tree({
 }
 
 function ConfirmDelete({
+  open,
   title,
   busy,
   onCancel,
   onConfirm,
 }: {
+  open: boolean;
   title: string;
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal-panel p-6" onClick={(e) => e.stopPropagation()}>
+    <Modal open={open} onClose={onCancel} ariaLabel="确认删除纲目">
+      <div className="p-6">
         <div className="label-ornament text-xs text-crimson mb-2">删节</div>
         <h3 className="font-display italic text-2xl text-parchment mb-3">
           确认删除此纲目？
@@ -116,18 +119,20 @@ function ConfirmDelete({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 function EditOutlineModal({
   node,
   allNodes,
+  open,
   onClose,
   onSaved,
 }: {
   node: OutlineNode;
   allNodes: OutlineNode[];
+  open: boolean;
   onClose: () => void;
   onSaved: (n: OutlineNode) => void;
 }) {
@@ -177,11 +182,8 @@ function EditOutlineModal({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-panel p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open={open} onClose={onClose} ariaLabel="修订纲目">
+      <div className="p-6">
         <div className="flex items-start justify-between mb-1">
           <div>
             <div className="label-ornament text-xs">校阅</div>
@@ -270,7 +272,7 @@ function EditOutlineModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -369,6 +371,7 @@ export default function OutlineTree({ pid }: { pid: string }) {
 
       {deleting && (
         <ConfirmDelete
+          open
           title={deleting.title}
           busy={busy}
           onCancel={() => setDeleting(null)}
@@ -379,6 +382,7 @@ export default function OutlineTree({ pid }: { pid: string }) {
         <EditOutlineModal
           node={editing}
           allNodes={outline}
+          open
           onClose={() => setEditing(null)}
           onSaved={() => {
             void refreshOutline();
